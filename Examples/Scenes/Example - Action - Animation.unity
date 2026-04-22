@@ -334,7 +334,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
-  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -384,7 +384,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 4.16, z: -10}
+  m_LocalPosition: {x: 0, y: 1, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -561,120 +561,6 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
---- !u!1 &428980672
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 428980673}
-  - component: {fileID: 428980676}
-  - component: {fileID: 428980675}
-  - component: {fileID: 428980674}
-  m_Layer: 0
-  m_Name: Cylinder
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &428980673
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 428980672}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 5, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 767515492}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!136 &428980674
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 428980672}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5000001
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
---- !u!23 &428980675
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 428980672}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: ef23d466bec564e449948c134d122e82, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &428980676
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 428980672}
-  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &626726890
 GameObject:
   m_ObjectHideFlags: 0
@@ -1031,7 +917,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &685749768
+--- !u!1 &677792047
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1039,133 +925,55 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 685749769}
-  - component: {fileID: 685749770}
+  - component: {fileID: 677792048}
+  - component: {fileID: 677792049}
   m_Layer: 0
-  m_Name: Event Manager
+  m_Name: Spawn Event
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &685749769
+--- !u!4 &677792048
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 685749768}
+  m_GameObject: {fileID: 677792047}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1020458542}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &685749770
+--- !u!114 &677792049
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 685749768}
+  m_GameObject: {fileID: 677792047}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 756cf15b13da9614cb03fcad8fb40cd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FrameCoreU::FrameCoreU.Events.EventManager
-  eventManagerName: Animation Cycles
+  eventManagerName: Spawn Ball
   activate: 0
   queueInSuccession: 1
-  loop: 1
-  singleUse: 0
+  loop: 0
+  singleUse: 1
   events:
-  - eventName: Bool - Scale - On
-    waitTime: 2
+  - eventName: Example - Spawn Ball
+    waitTime: 0
     debounce:
       debounceTime: 0
       currentDebounceTime: 0
     actions:
-    - rid: 8899601545048358997
-    triggerEvent:
-      m_PersistentCalls:
-        m_Calls: []
-    active: 0
-    eventManager: {fileID: 0}
-    processTime: 0
-  - eventName: Bool - Scale - Off
-    waitTime: 2
-    debounce:
-      debounceTime: 0
-      currentDebounceTime: 0
-    actions:
-    - rid: 8899601545048359006
-    triggerEvent:
-      m_PersistentCalls:
-        m_Calls: []
-    active: 0
-    eventManager: {fileID: 0}
-    processTime: 0
-  - eventName: Trigger - Spin
-    waitTime: 2
-    debounce:
-      debounceTime: 0
-      currentDebounceTime: 0
-    actions:
-    - rid: 8899601545048359049
-    triggerEvent:
-      m_PersistentCalls:
-        m_Calls: []
-    active: 0
-    eventManager: {fileID: 0}
-    processTime: 0
-  - eventName: Trigger - Move - On
-    waitTime: 2
-    debounce:
-      debounceTime: 0
-      currentDebounceTime: 0
-    actions:
-    - rid: 8899601545048359043
-    triggerEvent:
-      m_PersistentCalls:
-        m_Calls: []
-    active: 0
-    eventManager: {fileID: 0}
-    processTime: 0
-  - eventName: Trigger - Move - Off
-    waitTime: 2
-    debounce:
-      debounceTime: 0
-      currentDebounceTime: 0
-    actions:
-    - rid: 8899601545048359037
-    triggerEvent:
-      m_PersistentCalls:
-        m_Calls: []
-    active: 0
-    eventManager: {fileID: 0}
-    processTime: 0
-  - eventName: Trigger - Fade - On
-    waitTime: 2
-    debounce:
-      debounceTime: 0
-      currentDebounceTime: 0
-    actions:
-    - rid: 8899601545048359031
-    triggerEvent:
-      m_PersistentCalls:
-        m_Calls: []
-    active: 0
-    eventManager: {fileID: 0}
-    processTime: 0
-  - eventName: Trigger - Fade - Off
-    waitTime: 2
-    debounce:
-      debounceTime: 0
-      currentDebounceTime: 0
-    actions:
-    - rid: 8899601545048359025
+    - rid: 8899601275078049987
     triggerEvent:
       m_PersistentCalls:
         m_Calls: []
@@ -1176,138 +984,18 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 8899601545048358997
-      type: {class: Animation, ns: Foundry.Actions, asm: Foundry}
+    - rid: 8899601275078049987
+      type: {class: ActionSpawn, ns: Foundry.Actions, asm: Foundry}
       data:
         toggle: 1
-        actionName: Bool - Scale - On
-        animator: {fileID: 767515491}
-        triggerType: 0
-        parameterName: Scale
-        boolValue: 1
-        intValue: 0
-        floatValue: 0
-    - rid: 8899601545048359006
-      type: {class: Animation, ns: Foundry.Actions, asm: Foundry}
-      data:
-        toggle: 1
-        actionName: Bool - Scale - Off
-        animator: {fileID: 767515491}
-        triggerType: 0
-        parameterName: Scale
-        boolValue: 0
-        intValue: 0
-        floatValue: 0
-    - rid: 8899601545048359025
-      type: {class: Animation, ns: Foundry.Actions, asm: Foundry}
-      data:
-        toggle: 1
-        actionName: Trigger - Fade - Off
-        animator: {fileID: 767515491}
-        triggerType: 2
-        parameterName: Fade
-        boolValue: 1
-        intValue: 0
-        floatValue: 0
-    - rid: 8899601545048359031
-      type: {class: Animation, ns: Foundry.Actions, asm: Foundry}
-      data:
-        toggle: 1
-        actionName: Trigger - Fade - On
-        animator: {fileID: 767515491}
-        triggerType: 2
-        parameterName: Fade
-        boolValue: 1
-        intValue: 1
-        floatValue: 0
-    - rid: 8899601545048359037
-      type: {class: Animation, ns: Foundry.Actions, asm: Foundry}
-      data:
-        toggle: 1
-        actionName: Trigger - Move - Off
-        animator: {fileID: 767515491}
-        triggerType: 3
-        parameterName: Move
-        boolValue: 1
-        intValue: 0
-        floatValue: 20
-    - rid: 8899601545048359043
-      type: {class: Animation, ns: Foundry.Actions, asm: Foundry}
-      data:
-        toggle: 1
-        actionName: Trigger - Move - On
-        animator: {fileID: 767515491}
-        triggerType: 3
-        parameterName: Move
-        boolValue: 1
-        intValue: 0
-        floatValue: 19.98
-    - rid: 8899601545048359049
-      type: {class: Animation, ns: Foundry.Actions, asm: Foundry}
-      data:
-        toggle: 1
-        actionName: Trigger - Spin
-        animator: {fileID: 767515491}
-        triggerType: 1
-        parameterName: Spin
-        boolValue: 1
-        intValue: 0
-        floatValue: 0
---- !u!1 &767515490
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 767515492}
-  - component: {fileID: 767515491}
-  m_Layer: 0
-  m_Name: Animation
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!95 &767515491
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 767515490}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: b587a1ebd17ff824e96ed8ccec89aeb2, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
---- !u!4 &767515492
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 767515490}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 428980673}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+        actionName: Spawn Ball
+        prefab: {fileID: 5246841575200295991, guid: 965177abaadc0d645b399d6767d8d221, type: 3}
+        spawnPositionType: 1
+        parent: {fileID: 0}
+        position: {x: 0, y: 0, z: 0}
+        rotation: {x: 0, y: 0, z: 0}
+        spawnPointReference: {fileID: 677792048}
+        spawnRotationReference: {fileID: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1355,6 +1043,97 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1020458539
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1020458542}
+  - component: {fileID: 1020458541}
+  - component: {fileID: 1020458540}
+  m_Layer: 0
+  m_Name: Ball Spawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!23 &1020458540
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1020458539}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 0b4dd00b34441bd4bb67fa7cd0831b3a, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1020458541
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1020458539}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &1020458542
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1020458539}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 10, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 677792048}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &7981743872731524326
@@ -1423,5 +1202,4 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 7981743872731524326}
   - {fileID: 626726896}
-  - {fileID: 767515492}
-  - {fileID: 685749769}
+  - {fileID: 1020458542}

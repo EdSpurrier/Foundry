@@ -1,5 +1,5 @@
 {
   "name": "Foundry",
   "rootNamespace": "Foundry",
-  "references":[ "GUID:82ddeab7338237f449604d3500d8418b" ]
+  "references": [ "FrameCoreU" ]
 }

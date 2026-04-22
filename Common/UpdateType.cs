@@ -1,4 +1,4 @@
-namespace Foundry.Core
+namespace Foundry.Common
 {
     public enum UpdateType
     {

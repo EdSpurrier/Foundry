@@ -1,128 +1,259 @@
-﻿using System;
-using Sirenix.OdinInspector;
-using System.Collections;
 using System.Collections.Generic;
+using FrameCoreU.Events;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class VolumeTrigger : MonoBehaviour
+namespace Foundry.Triggers
 {
-    [Title("Volume Trigger")]
-    public LayerMaskNames layerMask;
-    public MaxMinInt volumeBoundsInclusive = new MaxMinInt {
-        min = 1,
-        max = 10000
-    };
-
-    public bool activated = false;
-
-    public bool enterEvents = false;
-    [ShowIf("enterEvents")]
-    [FoldoutGroup("Enter Trigger")]
-    [HideLabel]
-    public FrameCoreEvent enterEvent;
-
-
-    public bool exitEvents = false;
-    [ShowIf("exitEvents")]
-    [FoldoutGroup("Exit Trigger")]
-    [HideLabel]
-    public FrameCoreEvent exitEvent;
-
-
-
-    [FoldoutGroup("Objects In Trigger")]
-    public List<GameObject> gameObjectsInTrigger;
-
-    [Title("System")]
-    [HideLabel]
-    public DeBugger debug;
-
-    
-    
-    public int ObjectsInTrigger()
+    [RequireComponent(typeof(Collider))]
+    public class VolumeTrigger : MonoBehaviour
     {
-        return gameObjectsInTrigger.Count;
-    }
+        [Title("Settings")]
+        [SerializeField] protected bool active = true;
 
-    bool CheckIfInTrigger(GameObject thisGameObject)
-    {
-        bool result = false;
+        [Title("Filter")]
+        [SerializeField] protected LayerMask detectionMask = ~0;
 
-        if (!gameObjectsInTrigger.Contains(thisGameObject))
+        [BoxGroup("Threshold")]
+        [SerializeField] protected bool useThreshold = false;
+
+        [BoxGroup("Threshold")]
+        [ShowIf(nameof(useThreshold))]
+        [MinValue(1)]
+        [SuffixLabel("Required Count", Overlay = true)]
+        [SerializeField] protected int thresholdCount = 1;
+        
+        [ShowIf(nameof(useThreshold))]
+        [BoxGroup("Threshold")]
+        [SerializeField] protected bool triggerOnThresholdReached = true;
+        [ShowIf(nameof(triggerOnThresholdReached))]
+        [FoldoutGroup("Threshold/On Threshold Reached")]
+        [HideLabel]
+        [SerializeField] protected FrameCoreEvent onThresholdReached;
+        
+        
+        [ShowIf(nameof(useThreshold))]
+        [BoxGroup("Threshold")]
+        [SerializeField] protected bool triggerOnThresholdLost = true;
+        [ShowIf(nameof(triggerOnThresholdLost))]
+        [FoldoutGroup("Threshold/On Threshold Lost")]
+        [HideLabel]
+        [SerializeField] protected FrameCoreEvent onThresholdLost;
+
+        
+        [BoxGroup("Events")]
+        [SerializeField] protected bool triggerOnEnter = true;
+        [ShowIf(nameof(triggerOnEnter))]
+        [FoldoutGroup("Events/Enter Trigger")]
+        [HideLabel]
+        [SerializeField] protected FrameCoreEvent onEnter;
+        
+        [BoxGroup("Events")]
+        [SerializeField] protected bool triggerOnExit = true;
+        [ShowIf(nameof(triggerOnExit))]
+        [FoldoutGroup("Events/Exit Trigger")]
+        [HideLabel]
+        [SerializeField] protected FrameCoreEvent onExit;
+        
+        
+        [Title("System")]
+        [ReadOnly]
+        [SerializeField] protected int trackedCount = 0;
+
+        [ReadOnly]
+        [SerializeField] protected List<GameObject> trackedObjectsDebug = new();
+
+        protected readonly HashSet<GameObject> trackedObjects = new();
+
+        protected virtual void Reset()
         {
-            if (Frame.core.layerMasks.InLayerMask(layerMask, thisGameObject))
+            Collider triggerCollider = GetComponent<Collider>();
+
+            if (triggerCollider != null)
             {
-                gameObjectsInTrigger.Add(thisGameObject);
-                result = true;
-            };
-        };
+                triggerCollider.isTrigger = true;
+            }
+        }
 
-        return result;
-    }
-
-
-    private void OnTriggerEnter(Collider other)
-    {
-        TriggerEnter(other.gameObject);
-    }
-
-
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        TriggerEnter(other.gameObject);
-    }
-
-    private void TriggerEnter(GameObject gameObject)
-    {
-        if (CheckIfInTrigger(gameObject))
+        protected virtual void Awake()
         {
-            debug.Log("Object Entered & Accepted = " + gameObject.name);
-            
-            if (activated)
-            {
+            RefreshTrackedState();
+        }
+
+        protected virtual void OnDisable()
+        {
+            trackedObjects.Clear();
+            RefreshTrackedState();
+        }
+
+        protected virtual void OnTriggerEnter(Collider other)
+        {
+            if (!active)
                 return;
-            };
 
-            if (gameObjectsInTrigger.Count.BetweenRangeInt(volumeBoundsInclusive.min, volumeBoundsInclusive.max, true) )
-            {
-                debug.Log("Trigger Enter Activated");
-                enterEvent.Activate();
-                activated = true;
-            };
-        };
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        debug.Log("3D Trigger Exit");
-        TriggerExit(other.gameObject);
-    }
-    
-    private void OnTriggerExit2D(Collider2D other)
-    {
-        debug.Log("2D Trigger Exit");
-        TriggerExit(other.gameObject);
-    }
-
-    private void TriggerExit(GameObject gameObject)
-    {
-        if (gameObjectsInTrigger.Contains(gameObject))
-        {
-            gameObjectsInTrigger.Remove(gameObject);
-
-            debug.Log("Object Exited & Removed = " + gameObject.name);
-
-            if (!activated)
-            {
+            if (!PassesFilter(other))
                 return;
-            };
 
-            if ( !gameObjectsInTrigger.Count.BetweenRangeInt(volumeBoundsInclusive.min, volumeBoundsInclusive.max, true) )
+            GameObject target = GetTrackedObject(other);
+
+            if (target == null)
+                return;
+
+            bool wasAtOrAboveThreshold = IsAtOrAboveThreshold();
+            bool added = trackedObjects.Add(target);
+
+            if (!added)
+                return;
+
+            RefreshTrackedState();
+
+            Enter(other);
+            if (triggerOnEnter)
             {
-                debug.Log("Trigger Exit Activated");
-                if(exitEvents)       exitEvent.Activate();
-                activated = false;
-            };
-        };
+                onEnter?.Activate();
+            }
+
+            if (useThreshold && triggerOnThresholdReached)
+            {
+                bool isAtOrAboveThreshold = IsAtOrAboveThreshold();
+
+                if (!wasAtOrAboveThreshold && isAtOrAboveThreshold)
+                {
+                    ThresholdReached();
+                    onThresholdReached?.Activate();
+                }
+            }
+        }
+
+        protected virtual void OnTriggerExit(Collider other)
+        {
+            if (!active)
+                return;
+
+            if (!PassesFilter(other))
+                return;
+
+            GameObject target = GetTrackedObject(other);
+
+            if (target == null)
+                return;
+
+            bool wasAtOrAboveThreshold = IsAtOrAboveThreshold();
+            bool removed = trackedObjects.Remove(target);
+
+            if (!removed)
+                return;
+
+            RefreshTrackedState();
+
+            Exit(other);
+            if(triggerOnExit)
+            {
+                onExit?.Activate();
+            }
+
+            if (useThreshold && triggerOnThresholdLost)
+            {
+                bool isAtOrAboveThreshold = IsAtOrAboveThreshold();
+
+                if (wasAtOrAboveThreshold && !isAtOrAboveThreshold)
+                {
+                    ThresholdLost();
+                    onThresholdLost?.Activate();
+                }
+            }
+        }
+
+        protected virtual bool PassesFilter(Collider other)
+        {
+            if (other == null)
+                return false;
+
+            return ((1 << other.gameObject.layer) & detectionMask.value) != 0;
+        }
+
+        protected virtual GameObject GetTrackedObject(Collider other)
+        {
+            if (other == null)
+                return null;
+
+            if (other.attachedRigidbody != null)
+                return other.attachedRigidbody.gameObject;
+
+            return other.transform.root.gameObject;
+        }
+
+        protected virtual void Enter(Collider other)
+        {
+        }
+
+        protected virtual void Exit(Collider other)
+        {
+        }
+
+        protected virtual void ThresholdReached()
+        {
+        }
+
+        protected virtual void ThresholdLost()
+        {
+        }
+
+        protected bool IsAtOrAboveThreshold()
+        {
+            if (!useThreshold)
+                return false;
+
+            return trackedObjects.Count >= thresholdCount;
+        }
+
+        public int GetTrackedCount()
+        {
+            return trackedObjects.Count;
+        }
+
+        public bool Contains(GameObject target)
+        {
+            return target != null && trackedObjects.Contains(target);
+        }
+
+        public void Activate()
+        {
+            active = true;
+        }
+
+        public void Deactivate()
+        {
+            active = false;
+        }
+
+        protected void RefreshTrackedState()
+        {
+            trackedCount = trackedObjects.Count;
+            RefreshDebugList();
+        }
+
+        protected void RefreshDebugList()
+        {
+            trackedObjectsDebug.Clear();
+
+            foreach (GameObject trackedObject in trackedObjects)
+            {
+                if (trackedObject != null)
+                {
+                    trackedObjectsDebug.Add(trackedObject);
+                }
+            }
+        }
+
+#if UNITY_EDITOR
+        protected virtual void OnValidate()
+        {
+            if (thresholdCount < 1)
+            {
+                thresholdCount = 1;
+            }
+        }
+#endif
     }
 }

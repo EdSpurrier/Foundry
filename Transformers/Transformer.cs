@@ -1,4 +1,4 @@
-using Foundry.Core;
+using Foundry.Common;
 using UnityEngine;
 using Sirenix.OdinInspector;
 
