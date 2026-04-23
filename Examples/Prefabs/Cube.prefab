@@ -1215,23 +1215,23 @@ MonoBehaviour:
   m_GameObject: {fileID: 6083725648797881631}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ca47f7c0e1294a7eb7d5c0301d4e4574, type: 3}
+  m_Script: {fileID: 11500000, guid: e402fadd1ea756341bd7f601005c8b1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Foundry::Foundry.Triggers.ImpactTrigger
   active: 1
   detectionMask:
     serializedVersion: 2
-    m_Bits: 16
+    m_Bits: 951
   onImpact:
-    eventName: Break Cube
+    eventName: Event Name
     waitTime: 0
     debounce:
       debounceTime: 0
       currentDebounceTime: 0
     actions:
-    - rid: 8899601547421286484
-    - rid: 8899601547421286485
-    - rid: 8899601547421286486
+    - rid: 8899601568483770667
+    - rid: 8899601568483770666
+    - rid: 8899601568483770668
     triggerEvent:
       m_PersistentCalls:
         m_Calls: []
@@ -1239,29 +1239,30 @@ MonoBehaviour:
     eventManager: {fileID: 0}
     processTime: 0
   lastImpactObject: {fileID: 0}
+  lastImpactStrength: 0
   references:
     version: 2
     RefIds:
-    - rid: 8899601547421286484
-      type: {class: Unparent, ns: Foundry.Actions, asm: Foundry}
-      data:
-        toggle: 1
-        actionName: Unparent Debris
-        targets:
-        - {fileID: 5398804982254860882}
-        worldPositionStays: 1
-    - rid: 8899601547421286485
+    - rid: 8899601568483770666
       type: {class: Activator, ns: Foundry.Actions, asm: Foundry}
       data:
         toggle: 1
-        actionName: Activate Debris
+        actionName: Activate - Debris
         gameObjects:
         - {fileID: 2948828470449030819}
-    - rid: 8899601547421286486
+    - rid: 8899601568483770667
+      type: {class: Unparent, ns: Foundry.Actions, asm: Foundry}
+      data:
+        toggle: 1
+        actionName: Unparent - Debris
+        targets:
+        - {fileID: 5398804982254860882}
+        worldPositionStays: 1
+    - rid: 8899601568483770668
       type: {class: Destroy, ns: Foundry.Actions, asm: Foundry}
       data:
         toggle: 1
-        actionName: Destroy Cube
+        actionName: Destroy - Cube
         destroyType: 0
         gameObjects:
         - {fileID: 6083725648797881631}

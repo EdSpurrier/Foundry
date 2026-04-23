@@ -1,4 +1,6 @@
 using FrameCoreU.Events;
+using Foundry.Common;
+using Foundry.Data;
 using Foundry.Interfaces;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -6,7 +8,7 @@ using UnityEngine;
 namespace Foundry.Triggers
 {
     [RequireComponent(typeof(Collider))]
-    public class ImpactTrigger : MonoBehaviour
+    public class ImpactTrigger3D : MonoBehaviour
     {
         [Title("Settings")]
         [SerializeField] protected bool active = true;
@@ -42,21 +44,23 @@ namespace Foundry.Triggers
             if (!PassesFilter(collision))
                 return;
 
-            lastImpactObject = collision.gameObject;
-            lastImpactStrength = GetImpactStrength(collision);
+            ImpactData impactData = BuildImpactData(collision);
 
-            NotifyImpactReceiver(collision, lastImpactStrength);
+            if (impactData == null || !impactData.IsValid)
+                return;
 
-            Impact(collision);
+            lastImpactObject = impactData.target;
+            lastImpactStrength = impactData.force;
+
+            NotifyImpactReceiver(impactData);
+
+            Impact(impactData);
             onImpact?.Activate();
         }
 
         protected virtual bool PassesFilter(Collision collision)
         {
-            if (collision == null || collision.gameObject == null)
-                return false;
-
-            return ((1 << collision.gameObject.layer) & detectionMask.value) != 0;
+            return collision != null && detectionMask.Contains(collision.gameObject);
         }
 
         protected virtual float GetImpactStrength(Collision collision)
@@ -67,20 +71,37 @@ namespace Foundry.Triggers
             return collision.relativeVelocity.magnitude;
         }
 
-        protected virtual void NotifyImpactReceiver(Collision collision, float impactStrength)
+        protected virtual ImpactData BuildImpactData(Collision collision)
         {
             if (collision == null || collision.gameObject == null)
-                return;
+                return null;
 
-            IImpactReceiver receiver = collision.gameObject.GetComponent<IImpactReceiver>();
+            ContactPoint contact = collision.contactCount > 0 ? collision.GetContact(0) : default;
 
-            if (receiver != null)
+            return new ImpactData
             {
-                receiver.OnImpact(impactStrength, collision);
-            }
+                source = gameObject,
+                target = collision.gameObject,
+                force = GetImpactStrength(collision),
+                point = contact.point,
+                normal = contact.normal,
+                collider3D = collision.collider,
+                collision3D = collision,
+                is2D = false,
+            };
         }
 
-        protected virtual void Impact(Collision collision)
+        protected virtual void NotifyImpactReceiver(ImpactData impactData)
+        {
+            if (impactData == null || impactData.target == null)
+                return;
+
+            IImpactReceiver receiver = impactData.target.GetComponent<IImpactReceiver>();
+
+            receiver?.OnImpact(impactData);
+        }
+
+        protected virtual void Impact(ImpactData impactData)
         {
         }
 

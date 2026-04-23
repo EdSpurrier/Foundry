@@ -1,4 +1,4 @@
-using System;
+using Foundry.Data;
 using Foundry.Interfaces;
 using FrameCoreU.Events;
 using Sirenix.OdinInspector;
@@ -12,17 +12,24 @@ namespace Foundry.Examples.Scripts
 
         [Title("Events")]
         [SerializeField] protected FrameCoreEvent onBreak;
-        
-        public void OnImpact(float force, Collision collision)
+
+        public void OnImpact(ImpactData impactData)
         {
-            Debug.Log($"Break Force: {force}");
-            
-            if (force < breakForce)
+            if (impactData == null)
+                return;
+
+            Debug.Log(
+                $"{name} impacted | Force: {impactData.force} | " +
+                $"Source: {(impactData.source != null ? impactData.source.name : "None")} | " +
+                $"Point: {impactData.point} | Is2D: {impactData.is2D}"
+            );
+
+            if (impactData.force < breakForce)
                 return;
 
             Debug.Log($"{name} broke from impact!");
 
-            onBreak.Activate();
+            onBreak?.Activate();
         }
     }
 }

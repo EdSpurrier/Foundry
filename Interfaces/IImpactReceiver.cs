@@ -1,9 +1,9 @@
-using UnityEngine;
+using Foundry.Data;
 
 namespace Foundry.Interfaces
 {
     public interface IImpactReceiver
     {
-        void OnImpact(float force, Collision collision);
+        void OnImpact(ImpactData impactData);
     }
 }

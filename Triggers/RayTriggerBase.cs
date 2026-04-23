@@ -1,11 +1,12 @@
 using FrameCoreU.Events;
+using Foundry.Data;
 using Foundry.Transformers;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Foundry.Triggers
 {
-    public class RayTrigger : Transformer
+    public abstract class RayTriggerBase : Transformer
     {
         [Title("Ray")]
         [SerializeField] protected Transform rayOrigin;
@@ -29,10 +30,18 @@ namespace Foundry.Triggers
         [Title("Debug")]
         [SerializeField] protected bool drawRay = true;
 
-        protected RaycastHit currentHit;
-        protected Collider currentCollider;
-        protected Collider previousCollider;
-        protected bool hasHit;
+        [Title("System")]
+        [ReadOnly]
+        [SerializeField] protected GameObject currentTarget;
+
+        [ReadOnly]
+        [SerializeField] protected GameObject previousTarget;
+
+        [ReadOnly]
+        [SerializeField] protected bool hasHit;
+
+        protected RaycastData currentHitData;
+        protected RaycastData previousHitData;
         protected bool hasTriggeredOnce;
 
         protected override void Awake()
@@ -47,9 +56,10 @@ namespace Foundry.Triggers
 
         public override void Initialize()
         {
-            currentHit = default;
-            currentCollider = null;
-            previousCollider = null;
+            currentHitData = null;
+            previousHitData = null;
+            currentTarget = null;
+            previousTarget = null;
             hasHit = false;
             hasTriggeredOnce = false;
         }
@@ -59,26 +69,28 @@ namespace Foundry.Triggers
             if (triggerOnce && hasTriggeredOnce)
                 return;
 
-            Vector3 origin = rayOrigin.position;
-            Vector3 direction = rayOrigin.TransformDirection(localDirection.normalized);
+            previousHitData = currentHitData;
+            previousTarget = currentTarget;
 
-            previousCollider = currentCollider;
-
-            if (Physics.Raycast(origin, direction, out currentHit, rayDistance, detectionMask))
+            if (TryGetHit(out RaycastData hitData))
             {
                 hasHit = true;
-                currentCollider = currentHit.collider;
+                currentHitData = hitData;
+                currentTarget = hitData != null ? hitData.target : null;
 
-                if (requireHitChange && currentCollider == previousCollider)
+                if (currentTarget == null)
                     return;
 
-                if (currentCollider != previousCollider)
+                if (requireHitChange && currentTarget == previousTarget)
+                    return;
+
+                if (currentTarget != previousTarget)
                 {
-                    HitEnter(currentHit);
+                    HitEnter(currentHitData);
                     onHitEnter?.Activate();
                 }
 
-                Hit(currentHit);
+                Hit(currentHitData);
                 onHit?.Activate();
 
                 hasTriggeredOnce = true;
@@ -86,11 +98,12 @@ namespace Foundry.Triggers
             else
             {
                 hasHit = false;
-                currentCollider = null;
+                currentHitData = null;
+                currentTarget = null;
 
-                if (previousCollider != null)
+                if (previousTarget != null)
                 {
-                    HitExit(previousCollider);
+                    HitExit(previousHitData);
                     onHitExit?.Activate();
                 }
 
@@ -102,15 +115,27 @@ namespace Foundry.Triggers
             }
         }
 
-        protected virtual void Hit(RaycastHit hit)
+        protected virtual Vector3 GetRayOrigin()
+        {
+            return rayOrigin.position;
+        }
+
+        protected virtual Vector3 GetRayDirection()
+        {
+            return rayOrigin.TransformDirection(localDirection.normalized);
+        }
+
+        protected abstract bool TryGetHit(out RaycastData hitData);
+
+        protected virtual void Hit(RaycastData hitData)
         {
         }
 
-        protected virtual void HitEnter(RaycastHit hit)
+        protected virtual void HitEnter(RaycastData hitData)
         {
         }
 
-        protected virtual void HitExit(Collider previousHitCollider)
+        protected virtual void HitExit(RaycastData previousHitData)
         {
         }
 
@@ -127,7 +152,7 @@ namespace Foundry.Triggers
             }
         }
 
-        private void OnDrawGizmosSelected()
+        protected virtual void OnDrawGizmosSelected()
         {
             if (!drawRay)
                 return;

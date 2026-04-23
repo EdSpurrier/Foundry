@@ -5,8 +5,7 @@ using UnityEngine;
 
 namespace Foundry.Triggers
 {
-    [RequireComponent(typeof(Collider))]
-    public class VolumeTrigger : MonoBehaviour
+    public abstract class VolumeTriggerBase : MonoBehaviour
     {
         [Title("Settings")]
         [SerializeField] protected bool active = true;
@@ -22,40 +21,41 @@ namespace Foundry.Triggers
         [MinValue(1)]
         [SuffixLabel("Required Count", Overlay = true)]
         [SerializeField] protected int thresholdCount = 1;
-        
+
         [ShowIf(nameof(useThreshold))]
         [BoxGroup("Threshold")]
         [SerializeField] protected bool triggerOnThresholdReached = true;
+
         [ShowIf(nameof(triggerOnThresholdReached))]
         [FoldoutGroup("Threshold/On Threshold Reached")]
         [HideLabel]
         [SerializeField] protected FrameCoreEvent onThresholdReached;
-        
-        
+
         [ShowIf(nameof(useThreshold))]
         [BoxGroup("Threshold")]
         [SerializeField] protected bool triggerOnThresholdLost = true;
+
         [ShowIf(nameof(triggerOnThresholdLost))]
         [FoldoutGroup("Threshold/On Threshold Lost")]
         [HideLabel]
         [SerializeField] protected FrameCoreEvent onThresholdLost;
 
-        
         [BoxGroup("Events")]
         [SerializeField] protected bool triggerOnEnter = true;
+
         [ShowIf(nameof(triggerOnEnter))]
         [FoldoutGroup("Events/Enter Trigger")]
         [HideLabel]
         [SerializeField] protected FrameCoreEvent onEnter;
-        
+
         [BoxGroup("Events")]
         [SerializeField] protected bool triggerOnExit = true;
+
         [ShowIf(nameof(triggerOnExit))]
         [FoldoutGroup("Events/Exit Trigger")]
         [HideLabel]
         [SerializeField] protected FrameCoreEvent onExit;
-        
-        
+
         [Title("System")]
         [ReadOnly]
         [SerializeField] protected int trackedCount = 0;
@@ -64,16 +64,6 @@ namespace Foundry.Triggers
         [SerializeField] protected List<GameObject> trackedObjectsDebug = new();
 
         protected readonly HashSet<GameObject> trackedObjects = new();
-
-        protected virtual void Reset()
-        {
-            Collider triggerCollider = GetComponent<Collider>();
-
-            if (triggerCollider != null)
-            {
-                triggerCollider.isTrigger = true;
-            }
-        }
 
         protected virtual void Awake()
         {
@@ -86,7 +76,7 @@ namespace Foundry.Triggers
             RefreshTrackedState();
         }
 
-        protected virtual void OnTriggerEnter(Collider other)
+        protected void HandleEnter(Component other)
         {
             if (!active)
                 return;
@@ -107,7 +97,7 @@ namespace Foundry.Triggers
 
             RefreshTrackedState();
 
-            Enter(other);
+            Enter(target, other);
             if (triggerOnEnter)
             {
                 onEnter?.Activate();
@@ -125,7 +115,7 @@ namespace Foundry.Triggers
             }
         }
 
-        protected virtual void OnTriggerExit(Collider other)
+        protected void HandleExit(Component other)
         {
             if (!active)
                 return;
@@ -146,8 +136,8 @@ namespace Foundry.Triggers
 
             RefreshTrackedState();
 
-            Exit(other);
-            if(triggerOnExit)
+            Exit(target, other);
+            if (triggerOnExit)
             {
                 onExit?.Activate();
             }
@@ -164,30 +154,24 @@ namespace Foundry.Triggers
             }
         }
 
-        protected virtual bool PassesFilter(Collider other)
+        protected virtual bool PassesFilter(Component other)
         {
-            if (other == null)
-                return false;
-
-            return ((1 << other.gameObject.layer) & detectionMask.value) != 0;
+            return other != null && ((1 << other.gameObject.layer) & detectionMask.value) != 0;
         }
 
-        protected virtual GameObject GetTrackedObject(Collider other)
+        protected virtual GameObject GetTrackedObject(Component other)
         {
             if (other == null)
                 return null;
 
-            if (other.attachedRigidbody != null)
-                return other.attachedRigidbody.gameObject;
-
             return other.transform.root.gameObject;
         }
 
-        protected virtual void Enter(Collider other)
+        protected virtual void Enter(GameObject target, Component other)
         {
         }
 
-        protected virtual void Exit(Collider other)
+        protected virtual void Exit(GameObject target, Component other)
         {
         }
 
