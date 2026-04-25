@@ -10,14 +10,16 @@ namespace Foundry.Triggers
     [RequireComponent(typeof(Collider2D))]
     public class ImpactTrigger2D : MonoBehaviour
     {
+        [BoxGroup("Events")]
+        [FoldoutGroup("Events/On Impact")]
+        [HideLabel]
+        [SerializeField] protected FrameCoreEvent onImpact;
+        
         [Title("Settings")]
         [SerializeField] protected bool active = true;
 
         [Title("Filter")]
         [SerializeField] protected LayerMask detectionMask = ~0;
-
-        [Title("Events")]
-        [SerializeField] protected FrameCoreEvent onImpact;
 
         [Title("System")]
         [ReadOnly]
