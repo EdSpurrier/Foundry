@@ -1,7 +1,6 @@
 using FrameCoreU.Events;
 using Foundry.Common;
 using Foundry.Data;
-using Foundry.Interfaces;
 using Sirenix.OdinInspector;
 using UnityEngine;
 

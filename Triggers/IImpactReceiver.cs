@@ -1,6 +1,6 @@
 using Foundry.Data;
 
-namespace Foundry.Interfaces
+namespace Foundry.Triggers
 {
     public interface IImpactReceiver
     {

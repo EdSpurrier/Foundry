@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Foundry.Interfaces
+namespace Foundry.CameraSystem
 {
     public interface ICameraLookAheadSource
     {
