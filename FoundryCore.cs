@@ -8,9 +8,9 @@ namespace Foundry
     public class FoundryCore : MonoBehaviour
     {
         [Title("Cores")]
-        [SerializeField] private CameraCore camera;
+        [SerializeField] private CameraCore cameraCore;
 
-        public CameraCore Camera => camera;
+        public CameraCore Camera => cameraCore;
 
         private bool systemError;
 
@@ -39,7 +39,7 @@ namespace Foundry
         {
             systemError = false;
 
-            if (camera == null)
+            if (cameraCore == null)
             {
                 Debug.LogError("FoundryCore [ERROR] >> CameraCore is not attached.");
                 systemError = true;

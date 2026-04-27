@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Foundry.PhysicsSystem
 {
-    public class PhysicsImpulse2D : MonoBehaviour, IPhysicsAction
+    public class PhysicsImpulse3D : MonoBehaviour
     {
         [Title("Settings")]
         [SerializeField] private bool active = true;
@@ -23,7 +23,7 @@ namespace Foundry.PhysicsSystem
 
         [Title("Force")]
         [SerializeField] private float force = 10f;
-        [SerializeField] private ForceMode2D forceMode = ForceMode2D.Impulse;
+        [SerializeField] private ForceMode forceMode = ForceMode.Impulse;
 
         [Tooltip("Adds upward lift to the impulse direction. Useful for explosion pop.")]
         [SerializeField] private float upwardBias = 0f;
@@ -31,7 +31,7 @@ namespace Foundry.PhysicsSystem
         [SerializeField] private bool resetVelocity = false;
 
         [Title("Options")]
-        [SerializeField] private bool includeTriggers = false;
+        [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
 
         [Title("Debug")]
         [SerializeField] private bool drawDebug = true;
@@ -50,16 +50,16 @@ namespace Foundry.PhysicsSystem
             if (!active)
                 return;
 
-            Vector2 center = GetOriginPosition();
+            Vector3 center = GetOriginPosition();
 
-            bool previousHitTriggers = Physics2D.queriesHitTriggers;
-            Physics2D.queriesHitTriggers = includeTriggers;
+            Collider[] hits = Physics.OverlapSphere(
+                center,
+                maxRadius,
+                detectionMask,
+                triggerInteraction
+            );
 
-            Collider2D[] hits = Physics2D.OverlapCircleAll(center, maxRadius, detectionMask);
-
-            Physics2D.queriesHitTriggers = previousHitTriggers;
-
-            foreach (Collider2D hit in hits)
+            foreach (Collider hit in hits)
             {
                 if (hit == null || hit.attachedRigidbody == null)
                     continue;
@@ -68,21 +68,21 @@ namespace Foundry.PhysicsSystem
             }
         }
 
-        private void ApplyImpulse(Rigidbody2D rb, Vector2 center)
+        private void ApplyImpulse(Rigidbody rb, Vector3 center)
         {
-            Vector2 targetPos = rb.worldCenterOfMass;
-            Vector2 fromCenter = targetPos - center;
+            Vector3 targetPos = rb.worldCenterOfMass;
+            Vector3 fromCenter = targetPos - center;
 
             float distance = fromCenter.magnitude;
 
             if (distance <= 0.001f)
-                fromCenter = Vector2.up;
+                fromCenter = Vector3.up;
 
-            Vector2 direction = fromCenter.normalized;
+            Vector3 direction = fromCenter.normalized;
 
             if (upwardBias != 0f)
             {
-                direction += Vector2.up * upwardBias;
+                direction += Vector3.up * upwardBias;
                 direction.Normalize();
             }
 
@@ -93,11 +93,9 @@ namespace Foundry.PhysicsSystem
                 return;
 
             if (resetVelocity)
-                rb.linearVelocity = Vector2.zero;
+                rb.linearVelocity = Vector3.zero;
 
             rb.AddForce(direction * finalForce, forceMode);
-            
-            Debug.Log("Applying Impulse: direction:" + direction + ",  finalForce:" + finalForce + ", calculation:" + direction * finalForce +  ", forceMode:" + forceMode + ", rb:" +rb.gameObject.name );
         }
 
         private float CalculateFalloff(float distance)
@@ -111,7 +109,7 @@ namespace Foundry.PhysicsSystem
             return 1f - Mathf.InverseLerp(minRadius, maxRadius, distance);
         }
 
-        private Vector2 GetOriginPosition()
+        private Vector3 GetOriginPosition()
         {
             return origin != null ? origin.position : transform.position;
         }
@@ -144,7 +142,7 @@ namespace Foundry.PhysicsSystem
 
         private void DrawRadiusGizmos()
         {
-            Vector2 center = GetOriginPosition();
+            Vector3 center = GetOriginPosition();
 
             Gizmos.color = minRadiusColor;
             Gizmos.DrawWireSphere(center, minRadius);

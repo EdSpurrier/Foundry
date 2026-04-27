@@ -46,7 +46,7 @@ namespace Foundry.Transformers
 
         [FoldoutGroup("Rotation Lock")]
         public bool lockRotationZ = false;
-
+        
         protected override void Awake()
         {
             base.Awake();
@@ -91,7 +91,7 @@ namespace Foundry.Transformers
 
         protected override bool CanProcess()
         {
-            return follower != null && target != null;
+            return active && follower != null && target != null;
         }
 
         protected override void Process()
