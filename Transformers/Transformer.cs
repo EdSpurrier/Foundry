@@ -4,7 +4,7 @@ using Sirenix.OdinInspector;
 
 namespace Foundry.Transformers
 {
-    public abstract class Transformer : MonoBehaviour
+    public abstract class Transformer : MonoBehaviour, ITransformerAction
     {
         [Title("Settings")]
         public bool active = true;
@@ -37,12 +37,12 @@ namespace Foundry.Transformers
         {
         }
 
-        public void Activate()
+        public virtual void Activate()
         {
             active = true;
         }
 
-        public void Deactivate()
+        public virtual void Deactivate()
         {
             active = false;
         }
