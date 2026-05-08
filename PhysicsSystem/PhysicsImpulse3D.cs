@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Foundry.PhysicsSystem
 {
-    public class PhysicsImpulse3D : MonoBehaviour
+    public class PhysicsImpulse3D : MonoBehaviour, IPhysicsAction
     {
         [Title("Settings")]
         [SerializeField] private bool active = true;
