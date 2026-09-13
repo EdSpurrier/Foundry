@@ -116,21 +116,55 @@ Example:
 
 ## Current Components
 
-Foundry currently includes early reusable gameplay building blocks such as:
+Foundry has grown well past its early building blocks. This list reflects what is actually implemented — keep it in sync when Actions/Transformers/Triggers are added or removed.
 
 ### Actions
-- `Spawn`
-- `Sound`
+
+General:
+- `Spawn` — instantiate a prefab (pooled) at a fixed position/rotation or at a reference Transform, with optional parenting.
+- `Sound` — play a sound by index from an assigned `SoundBank`.
+- `Activate` (class `Activator`) — set a list of GameObjects active.
+- `Deactivate` (class `Deactivator`) — set a list of GameObjects inactive.
+- `Destroy` — destroy a GameObject / set of GameObjects.
+- `Parent` — parent a Transform to another.
+- `Unparent` — clear a Transform's parent.
+- `Attach` — attach objects via a `AttachmentGroup` (position/rotation offset onto a socket).
+- `Detach` — detach objects previously attached via an `AttachmentGroup`.
+- `Animation` — set a bool/int/float/trigger parameter on a Mecanim `Animator`.
+- `PhysicsAction` — invoke `IPhysicsAction.Activate()` on an assigned behaviour (bridge to `PhysicsImpulse2D`/`PhysicsImpulse3D`, etc.).
+- `TransformerAction` — activate/deactivate an assigned `ITransformerAction` (e.g. toggle a `Follower` on/off).
+
+Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` or falls back to `Foundry.Camera`):
+- `CameraSetTarget` — change the camera's follow target.
+- `CameraOffset` — change the camera's follow offset.
+- `CameraZoom` — change the camera's orthographic zoom.
+- `CameraLookAhead` — enable/disable look-ahead.
+- `CameraFocusTemporary` — snap/pan to a target for a duration, then restore the previous state.
+- `CameraStopTemporaryFocus` — cancel an active temporary focus early.
+- `CameraReset` — reset the camera to its configured defaults.
 
 ### Transformers
-- `Transformer`
-- `Follower`
+- `Transformer` — abstract base: runs on a chosen Unity update loop (`Update`/`FixedUpdate`/`LateUpdate`) while active.
+- `Follower` — smoothed or snapped position/rotation following, with per-axis locking.
+- `ScaleOverTime` — animates scale over time; implements `ITransformerAction` directly.
+
+### Triggers
+- `VolumeTriggerBase` (abstract) / `VolumeTrigger2D` / `VolumeTrigger3D` — enter/exit detection with layer filtering and optional threshold events (fire once N tracked objects are in/out).
+- `ImpactTrigger2D` / `ImpactTrigger3D` — collision-based impact detection, builds `ImpactData`, notifies an `IImpactReceiver` on the hit object, then fires an `onImpact` event.
+- `RayTriggerBase` (abstract, extends `Transformer`) / `RayTrigger2D` / `RayTrigger3D` — continuous raycast with `onHit`/`onHitEnter`/`onHitExit`/`onNoHit` events.
+
+### Camera System
+- `CameraCore` — stable API (`SetTarget`, `SetOffset`, `SetZoom`, `SetLookAhead`, `ResetCamera`, `FocusTemporary`) that the Camera Actions above call into.
+- `CameraRig2D` — the actual per-frame follow/zoom/look-ahead behaviour.
+
+### Attachments
+- `AttachmentBinding` / `AttachmentGroup` — socket-style parenting with position/rotation offsets and an editor-time position preview, driven by the `Attach`/`Detach` Actions.
 
 ### Planned / Expanding
-- trigger framework
-- additional actions
-- additional transformers
+- additional actions, transformers, and triggers as the game layer's needs surface them
 - common gameplay utilities
+
+See [Assets/ARCHITECTURE.md](../ARCHITECTURE.md) for how these pieces connect to the event pipeline and to the Game layer.
 
 ---
 
@@ -158,6 +192,16 @@ Foundry is being built around a few key goals:
 ## Relationship to FrameCoreU
 
 Foundry depends on FrameCoreU.
+
+### Compatibility
+
+Foundry and FrameCoreU are versioned independently (each repo's current branch name is its version), so their version numbers won't generally match — that's expected, not a mistake. What matters is which pair is known to work together:
+
+| Foundry | FrameCoreU |
+|---|---|
+| `0.3.0` | `0.2.0` |
+
+When bumping either repo to a new branch/version, update this table if the pairing changes, so a project vendoring both always knows which combination was actually tested together.
 
 FrameCoreU provides the underlying architecture and shared systems.
 
