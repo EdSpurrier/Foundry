@@ -152,6 +152,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 - `VolumeTriggerBase` (abstract) / `VolumeTrigger2D` / `VolumeTrigger3D` — enter/exit detection with layer filtering and optional threshold events (fire once N tracked objects are in/out).
 - `ImpactTrigger2D` / `ImpactTrigger3D` — collision-based impact detection, builds `ImpactData`, notifies an `IImpactReceiver` on the hit object, then fires an `onImpact` event.
 - `RayTriggerBase` (abstract, extends `Transformer`) / `RayTrigger2D` / `RayTrigger3D` — continuous raycast with `onHit`/`onHitEnter`/`onHitExit`/`onNoHit` events.
+- `UpdraftTrigger3D` (extends `VolumeTrigger3D`) — a directional wind/vent zone: every `FixedUpdate` while active, notifies any `IUpdraftReceiver` on tracked objects with a configured direction, velocity, and onset (`UpdraftData`) for as long as they remain inside. Onset is per-instance — `Smooth` (ramps in at a configurable acceleration) or `Instant` (snaps straight to the target velocity), so one vent can be a gentle sustained thermal and another a sudden gust. Foundry doesn't decide what a receiver does with that — it's just dispatch, same shape as `ImpactTrigger3D`/`IImpactReceiver`.
 
 ### Camera System
 - `CameraCore` — stable API (`SetTarget`, `SetOffset`, `SetZoom`, `SetLookAhead`, `ResetCamera`, `FocusTemporary`) that the Camera Actions above call into.
