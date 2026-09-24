@@ -154,6 +154,13 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 - `RayTriggerBase` (abstract, extends `Transformer`) / `RayTrigger2D` / `RayTrigger3D` — continuous raycast with `onHit`/`onHitEnter`/`onHitExit`/`onNoHit` events.
 - `UpdraftTrigger3D` (extends `VolumeTrigger3D`) — a directional wind/vent zone: every `FixedUpdate` while active, notifies any `IUpdraftReceiver` on tracked objects with a configured direction, velocity, and onset (`UpdraftData`) for as long as they remain inside. Onset is per-instance — `Smooth` (ramps in at a configurable acceleration) or `Instant` (snaps straight to the target velocity), so one vent can be a gentle sustained thermal and another a sudden gust. Optional distance falloff (`Use Falloff`) scales that velocity by a curve evaluated over distance-along-`Direction` from an `Origin` point out to `Max Distance` — e.g. full push near a vent's base, easing to zero by the top of its collider, so a receiver settles into a float instead of launching indefinitely. Foundry doesn't decide what a receiver does with any of this — it's just dispatch, same shape as `ImpactTrigger3D`/`IImpactReceiver`.
 
+### Damage
+- `DamageData` / `DamageType` — a damage payload: amount, type (`Generic`, `Bullet`, `Explosion`, `Impact`, `Fire`), source/instigator/target, hit point/direction/normal, and force.
+- `IDamageReceiver` — `ApplyDamage(DamageData)`; implement it on anything that can be hurt. Same dispatch shape as `IImpactReceiver` — Foundry delivers the damage, the receiver decides what it means.
+- `Life` — a generic health component implementing `IDamageReceiver`: life points with a max, `Damage`/`Heal`/`Die`/`ResetLife`, `hurtEvent`/`healEvent`/`deathEvent`, and optional **life stages** that fire their own event when life drops to a threshold (e.g. a boss changing phase at half health).
+- `ExplosionDamage` — `Explode()` damages every `IDamageReceiver` within a radius (layer-filtered), with optional linear distance falloff. Known quirk: it applies once per *collider* in range, so a receiver with several colliders is hit several times.
+- `RaycastDamage` — `Fire()` casts a ray forward from an origin; if the first thing it hits is (or is parented under) an `IDamageReceiver`, it's damaged. Optionally applies a physics force to the hit Rigidbody.
+
 ### Camera System
 - `CameraCore` — stable API (`SetTarget`, `SetOffset`, `SetZoom`, `SetLookAhead`, `ResetCamera`, `FocusTemporary`) that the Camera Actions above call into.
 - `CameraRig2D` — the actual per-frame follow/zoom/look-ahead behaviour.
@@ -200,6 +207,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.4.0` | `0.2.0` |
 | `0.3.0` | `0.2.0` |
 
 When bumping either repo to a new branch/version, update this table if the pairing changes, so a project vendoring both always knows which combination was actually tested together.
