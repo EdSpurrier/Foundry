@@ -201,6 +201,8 @@ namespace Foundry.Triggers
             return target != null && trackedObjects.Contains(target);
         }
 
+        public bool IsActive => active;
+
         public void Activate()
         {
             active = true;

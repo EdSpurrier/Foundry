@@ -1,10 +1,17 @@
+using System.Collections.Generic;
 using Foundry.Data;
+using Foundry.Particles;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Foundry.Triggers
 {
-    public class UpdraftTrigger3D : VolumeTrigger3D
+    // A wind/vent zone. Anything inside with an IUpdraftReceiver is told about the updraft and decides for itself
+    // what to do (the player only rides it while gliding). Any other non-kinematic Rigidbody inside is blown along
+    // Direction in proportion to how light it is, and as an IParticleAffector it blows the particles of any
+    // ParticlePhysics system too. The zone is this object's trigger collider - use a Box, Sphere, Capsule or convex
+    // Mesh collider.
+    public class UpdraftTrigger3D : VolumeTrigger3D, IParticleAffector
     {
         [Title("Updraft")]
         [SerializeField] private Vector3 direction = Vector3.up;
@@ -34,8 +41,76 @@ namespace Foundry.Triggers
         [Tooltip("Push strength multiplier over normalized distance from Origin (0 = at Origin, 1 = at Max Distance). Author starting at 1 (full push near the base) easing to 0 (no push at the top), so the receiver settles into a float rather than being launched indefinitely.")]
         [SerializeField] private AnimationCurve falloffCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
 
+        [Title("Rigidbodies")]
+        [Tooltip("Blow any non-kinematic Rigidbody inside (that isn't an IUpdraftReceiver, like the player) along Direction, in proportion to how light it is.")]
+        [SerializeField] private bool pushRigidbodies = true;
+
+        [ShowIf(nameof(pushRigidbodies))]
+        [Tooltip("Mass (kg) that exactly hovers at full strength. Lighter objects are carried up toward Velocity; heavier ones barely move, and a lot heavier (a big rock) not at all. Pushing sideways, the same force usually can't overcome a heavy object's ground friction. Nothing is ever pushed faster than Velocity.")]
+        [SerializeField, Min(0f)] private float maxMassLifted = 1f;
+
+        [Title("Particles")]
+        [Tooltip("Blow the particles of any particle system with a ParticlePhysics component while they're inside this zone.")]
+        [SerializeField] private bool pushParticles = true;
+
+        [ShowIf(nameof(pushParticles))]
+        [Tooltip("How quickly particles in this zone catch up to the wind's speed, per second, at Sensitivity 1 (each particle system's ParticlePhysics Sensitivity scales it). Push only - particles already outrunning the wind aren't slowed.")]
+        [SerializeField, Min(0f)] private float particleCatchUp = 6f;
+
         [Title("Debug")]
         [SerializeField] private bool drawGizmo = true;
+
+        private readonly List<GameObject> _staleTracked = new();
+        private Collider _zone;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            _zone = GetComponent<Collider>();
+        }
+
+        private void OnEnable()
+        {
+            ParticleAffectors.Register(this);
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            ParticleAffectors.Unregister(this);
+        }
+
+        public bool IsAffecting => active && pushParticles;
+
+        public Bounds AffectBounds => _zone.bounds;
+
+        // Same wind as everything else: pulls the particle's speed along Direction up toward the wind's speed at its
+        // position (with falloff), at particleCatchUp scaled by the receiving system's sensitivity
+        public Vector3 Affect(Vector3 position, Vector3 particleVelocity, float sensitivity, float deltaTime)
+        {
+            if (!TryGetWindAt(position, out float windSpeed))
+                return particleVelocity;
+
+            Vector3 axis = Direction;
+            float along = Vector3.Dot(particleVelocity, axis);
+            if (along >= windSpeed)
+                return particleVelocity;
+
+            float blend = Mathf.Clamp01(particleCatchUp * sensitivity * deltaTime);
+            return particleVelocity + axis * ((windSpeed - along) * blend);
+        }
+
+        // Wind speed along Direction at a world position, with falloff applied. False if the position is outside the
+        // zone's collider (ClosestPoint returns the point itself when it's inside a convex collider).
+        public bool TryGetWindAt(Vector3 position, out float windSpeed)
+        {
+            windSpeed = 0f;
+            if ((_zone.ClosestPoint(position) - position).sqrMagnitude > 0.0001f)
+                return false;
+
+            windSpeed = velocity * CalculateFalloff(position);
+            return true;
+        }
 
         public Vector3 Direction => direction.normalized;
         public float Velocity => velocity;
@@ -51,25 +126,66 @@ namespace Foundry.Triggers
 
             foreach (GameObject tracked in trackedObjects)
             {
-                if (tracked == null)
+                // Destroyed or deactivated inside the zone (e.g. despawned to a pool) - there's no exit event for
+                // that, so drop it here or a pooled object would still be pushed after respawning elsewhere
+                if (tracked == null || !tracked.activeInHierarchy)
+                {
+                    _staleTracked.Add(tracked);
                     continue;
-
-                if (!tracked.TryGetComponent(out IUpdraftReceiver receiver))
-                    continue;
+                }
 
                 float falloff = CalculateFalloff(tracked.transform.position);
 
-                UpdraftData updraftData = new UpdraftData
+                if (tracked.TryGetComponent(out IUpdraftReceiver receiver))
                 {
-                    source = gameObject,
-                    direction = Direction,
-                    velocity = velocity * falloff,
-                    onsetMode = onsetMode,
-                    onsetAcceleration = onsetAcceleration
-                };
+                    UpdraftData updraftData = new UpdraftData
+                    {
+                        source = gameObject,
+                        direction = Direction,
+                        velocity = velocity * falloff,
+                        onsetMode = onsetMode,
+                        onsetAcceleration = onsetAcceleration
+                    };
 
-                receiver.OnUpdraft(updraftData, Time.fixedDeltaTime);
+                    receiver.OnUpdraft(updraftData, Time.fixedDeltaTime);
+                }
+                else if (pushRigidbodies && tracked.TryGetComponent(out Rigidbody body) && !body.isKinematic)
+                {
+                    PushRigidbody(body, velocity * falloff);
+                }
             }
+
+            RemoveStaleTracked();
+        }
+
+        // Air drag toward the wind's speed along Direction: force proportional to how much slower than the wind the
+        // body is moving, scaled so a body of exactly maxMassLifted hovers at full strength (drag * windSpeed = m*g).
+        // Applied as a velocity change capped at closing the whole gap in one step, so very light bodies (egg shell
+        // pieces weigh 1e-7 kg) match the wind instead of being fired off at absurd speed. Push only - a body already
+        // moving faster than the wind along Direction isn't slowed.
+        private void PushRigidbody(Rigidbody body, float windSpeed)
+        {
+            Vector3 axis = Direction;
+            float gap = windSpeed - Vector3.Dot(body.linearVelocity, axis);
+            if (gap <= 0f)
+                return;
+
+            float drag = maxMassLifted * Physics.gravity.magnitude / Mathf.Max(velocity, 0.01f);
+            float response = Mathf.Clamp01(drag * Time.fixedDeltaTime / Mathf.Max(body.mass, 1e-9f));
+
+            body.AddForce(axis * (gap * response), ForceMode.VelocityChange);
+        }
+
+        private void RemoveStaleTracked()
+        {
+            if (_staleTracked.Count == 0)
+                return;
+
+            foreach (GameObject stale in _staleTracked)
+                trackedObjects.Remove(stale);
+
+            _staleTracked.Clear();
+            RefreshTrackedState();
         }
 
         private float CalculateFalloff(Vector3 targetPosition)
