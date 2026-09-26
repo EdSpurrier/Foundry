@@ -3,26 +3,33 @@ using Foundry.Data;
 using Foundry.Particles;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Foundry.Triggers
 {
-    // A wind/vent zone. Anything inside with an IUpdraftReceiver is told about the updraft and decides for itself
-    // what to do (the player only rides it while gliding). Any other non-kinematic Rigidbody inside is blown along
-    // Direction in proportion to how light it is, and as an IParticleAffector it blows the particles of any
-    // ParticlePhysics system too. The zone is this object's trigger collider - use a Box, Sphere, Capsule or convex
-    // Mesh collider.
-    public class UpdraftTrigger3D : VolumeTrigger3D, IParticleAffector
+    // A wind zone blowing in any direction - an updraft vent to glide on, a mechanical fan blowing across a level, a
+    // gust through a gap. Anything inside with an IWindReceiver is told about the wind and decides for itself what to
+    // do (the player only rides it while gliding). Any other non-kinematic Rigidbody inside is blown along Direction in
+    // proportion to how light it is, and as an IParticleAffector it blows the particles of any ParticlePhysics system
+    // too. The zone is this object's trigger collider - use a Box, Sphere, Capsule or convex Mesh collider.
+    public class WindTrigger3D : VolumeTrigger3D, IParticleAffector
     {
-        [Title("Updraft")]
+        [Title("Wind")]
+        [Tooltip("Which way it blows. With Direction Space = Self it's relative to this object's rotation, so a fan can be aimed just by rotating it.")]
         [SerializeField] private Vector3 direction = Vector3.up;
+
+        [Tooltip("Self: Direction turns with this object's rotation (aim a fan by rotating it). World: Direction is fixed in world space.")]
+        [SerializeField] private Space directionSpace = Space.Self;
+
+        [Tooltip("Wind speed (m/s) along Direction at full strength.")]
         [SerializeField] private float velocity = 15f;
 
         [Title("Onset")]
         [EnumToggleButtons]
         [HideLabel]
-        [SerializeField] private UpdraftOnsetMode onsetMode = UpdraftOnsetMode.Smooth;
+        [SerializeField] private WindOnsetMode onsetMode = WindOnsetMode.Smooth;
 
-        [ShowIf(nameof(onsetMode), UpdraftOnsetMode.Smooth)]
+        [ShowIf(nameof(onsetMode), WindOnsetMode.Smooth)]
         [Tooltip("How quickly velocity is pulled toward direction*velocity. Ignored when Onset is Instant.")]
         [SerializeField] private float onsetAcceleration = 40f;
 
@@ -42,12 +49,14 @@ namespace Foundry.Triggers
         [SerializeField] private AnimationCurve falloffCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
 
         [Title("Rigidbodies")]
-        [Tooltip("Blow any non-kinematic Rigidbody inside (that isn't an IUpdraftReceiver, like the player) along Direction, in proportion to how light it is.")]
+        [Tooltip("Blow any non-kinematic Rigidbody inside (that isn't an IWindReceiver, like the player) along Direction, in proportion to how light it is.")]
         [SerializeField] private bool pushRigidbodies = true;
 
         [ShowIf(nameof(pushRigidbodies))]
-        [Tooltip("Mass (kg) that exactly hovers at full strength. Lighter objects are carried up toward Velocity; heavier ones barely move, and a lot heavier (a big rock) not at all. Pushing sideways, the same force usually can't overcome a heavy object's ground friction. Nothing is ever pushed faster than Velocity.")]
-        [SerializeField, Min(0f)] private float maxMassLifted = 1f;
+        [Tooltip("How strong the wind is, as the heaviest mass (kg) it could hold up against gravity at full strength - blowing upward, anything lighter rises and anything heavier doesn't lift. Blowing sideways the same force applies: a light egg is carried along toward Velocity, while a heavy rock gets a push too small to beat its ground friction. Nothing is ever pushed faster than Velocity.")]
+        [SuffixLabel("kg", Overlay = true)]
+        [FormerlySerializedAs("maxMassLifted")]
+        [SerializeField, Min(0f)] private float strength = 1f;
 
         [Title("Particles")]
         [Tooltip("Blow the particles of any particle system with a ParticlePhysics component while they're inside this zone.")]
@@ -112,9 +121,10 @@ namespace Foundry.Triggers
             return true;
         }
 
-        public Vector3 Direction => direction.normalized;
+        // World space, normalized
+        public Vector3 Direction => (directionSpace == Space.Self ? transform.TransformDirection(direction) : direction).normalized;
         public float Velocity => velocity;
-        public UpdraftOnsetMode OnsetMode => onsetMode;
+        public WindOnsetMode OnsetMode => onsetMode;
         public float OnsetAcceleration => onsetAcceleration;
         public Transform Origin => origin != null ? origin : transform;
         public float MaxDistance => maxDistance;
@@ -136,9 +146,9 @@ namespace Foundry.Triggers
 
                 float falloff = CalculateFalloff(tracked.transform.position);
 
-                if (tracked.TryGetComponent(out IUpdraftReceiver receiver))
+                if (tracked.TryGetComponent(out IWindReceiver receiver))
                 {
-                    UpdraftData updraftData = new UpdraftData
+                    WindData windData = new WindData
                     {
                         source = gameObject,
                         direction = Direction,
@@ -147,7 +157,7 @@ namespace Foundry.Triggers
                         onsetAcceleration = onsetAcceleration
                     };
 
-                    receiver.OnUpdraft(updraftData, Time.fixedDeltaTime);
+                    receiver.OnWind(windData, Time.fixedDeltaTime);
                 }
                 else if (pushRigidbodies && tracked.TryGetComponent(out Rigidbody body) && !body.isKinematic)
                 {
@@ -159,7 +169,7 @@ namespace Foundry.Triggers
         }
 
         // Air drag toward the wind's speed along Direction: force proportional to how much slower than the wind the
-        // body is moving, scaled so a body of exactly maxMassLifted hovers at full strength (drag * windSpeed = m*g).
+        // body is moving, scaled so a body of exactly `strength` kg hovers at full strength (drag * windSpeed = m*g).
         // Applied as a velocity change capped at closing the whole gap in one step, so very light bodies (egg shell
         // pieces weigh 1e-7 kg) match the wind instead of being fired off at absurd speed. Push only - a body already
         // moving faster than the wind along Direction isn't slowed.
@@ -170,7 +180,7 @@ namespace Foundry.Triggers
             if (gap <= 0f)
                 return;
 
-            float drag = maxMassLifted * Physics.gravity.magnitude / Mathf.Max(velocity, 0.01f);
+            float drag = strength * Physics.gravity.magnitude / Mathf.Max(velocity, 0.01f);
             float response = Mathf.Clamp01(drag * Time.fixedDeltaTime / Mathf.Max(body.mass, 1e-9f));
 
             body.AddForce(axis * (gap * response), ForceMode.VelocityChange);

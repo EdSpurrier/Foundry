@@ -4,31 +4,31 @@ using UnityEngine.Rendering;
 
 namespace Foundry.Triggers
 {
-    // Makes an UpdraftTrigger3D's zone visible: drives a particle system so blown debris streams out of the vent's
+    // Makes a WindTrigger3D's zone visible: drives a particle system so blown debris streams out of the zone's
     // base, across its whole cross-section, along its Direction at the wind's speed, and fades out at the far end.
-    // It only sets what has to match the zone (placement, emitter size, speed, lifetime, rate, on/off with the vent) -
+    // It only sets what has to match the zone (placement, emitter size, speed, lifetime, rate, on/off with the wind) -
     // the look (material, colour, size, spin, flutter) is the particle system's own and is never overwritten, so
     // swap in a leaf sprite material etc. freely. Fitting runs on Awake; use "Fit To Zone" to preview in the editor.
-    [RequireComponent(typeof(UpdraftTrigger3D))]
-    public class UpdraftVisual : MonoBehaviour
+    [RequireComponent(typeof(WindTrigger3D))]
+    public class WindVisual : MonoBehaviour
     {
         [Tooltip("The particle system to drive. Use Create Particles to make one with a blown-debris starting look.")]
         [SerializeField] private ParticleSystem particles;
 
-        [Tooltip("Particles emitted per second for each square metre of the vent's cross-section.")]
+        [Tooltip("Particles emitted per second for each square metre of the zone's cross-section.")]
         [SerializeField, Min(0f)] private float density = 2f;
 
-        [Tooltip("Particle speed as a fraction of the vent's Velocity. Lifetime is set so they still just reach the far end of the zone.")]
+        [Tooltip("Particle speed as a fraction of the wind's Velocity. Lifetime is set so they still just reach the far end of the zone.")]
         [SerializeField, Range(0.05f, 2f)] private float speedScale = 1f;
 
         private const float EMITTER_THICKNESS = 0.1f;
 
-        private UpdraftTrigger3D _updraft;
+        private WindTrigger3D _wind;
         private bool _emitting = true;
 
         private void Awake()
         {
-            _updraft = GetComponent<UpdraftTrigger3D>();
+            _wind = GetComponent<WindTrigger3D>();
             FitToZone();
         }
 
@@ -38,7 +38,7 @@ namespace Foundry.Triggers
                 return;
 
             // Emission off rather than Stop(), so particles already in the air finish their flight
-            bool shouldEmit = _updraft.IsActive;
+            bool shouldEmit = _wind.IsActive;
             if (shouldEmit == _emitting)
                 return;
 
@@ -54,8 +54,8 @@ namespace Foundry.Triggers
             if (particles == null)
                 return;
 
-            UpdraftTrigger3D updraft = _updraft != null ? _updraft : GetComponent<UpdraftTrigger3D>();
-            Vector3 direction = updraft.Direction;
+            WindTrigger3D wind = _wind != null ? _wind : GetComponent<WindTrigger3D>();
+            Vector3 direction = wind.Direction;
             MeasureZone(GetComponent<Collider>(), direction, out Vector3 center, out Quaternion rotation, out Vector2 crossSection, out float length);
 
             // Emitter is a thin slab across the zone's base, facing along Direction (a Box shape emits along its local Z)
@@ -64,11 +64,11 @@ namespace Foundry.Triggers
             emitter.localScale = Vector3.one;
 
             ParticleSystem.MainModule main = particles.main;
-            // Local scaling ignores the vent's own scale, so sizes and the shape are in world units
+            // Local scaling ignores the wind object's own scale, so sizes and the shape are in world units
             main.scalingMode = ParticleSystemScalingMode.Local;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
 
-            float speed = Mathf.Max(updraft.Velocity * speedScale, 0.01f);
+            float speed = Mathf.Max(wind.Velocity * speedScale, 0.01f);
             main.startSpeed = speed;
             main.startLifetime = Mathf.Max(length / speed, 0.1f);
 
@@ -132,8 +132,8 @@ namespace Foundry.Triggers
         [HideIf(nameof(particles))]
         private void CreateParticles()
         {
-            GameObject child = new("Updraft Particles");
-            UnityEditor.Undo.RegisterCreatedObjectUndo(child, "Create Updraft Particles");
+            GameObject child = new("Wind Particles");
+            UnityEditor.Undo.RegisterCreatedObjectUndo(child, "Create Wind Particles");
             child.transform.SetParent(transform, false);
 
             particles = child.AddComponent<ParticleSystem>();
