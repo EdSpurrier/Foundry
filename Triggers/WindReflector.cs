@@ -80,6 +80,10 @@ namespace Foundry.Triggers
         [Tooltip("Fixed: the redirected wind reaches up to Max Reach, with its own falloff. Match Source: an exact reflection - it carries on for as far as the incoming wind would have gone past this object, fading with the source's own falloff from where it hit.")]
         [SerializeField] private ReachMode reachMode = ReachMode.Fixed;
 
+        [Tooltip("Scales how far the reflection carries on, with its fade stretched to match - for a bigger effect from a short fan or in a tight space. Match Source: 1 = exactly as far as the incoming wind would have gone, 2 = twice as far. Fixed: multiplies Max Reach. How strong it is stays with Strength %.")]
+        [SuffixLabel("x", Overlay = true)]
+        [SerializeField, Min(0.1f)] private float reflectionMultiplier = 1f;
+
         [ShowIf(nameof(reachMode), ReachMode.Fixed)]
         [LabelText("Max Reach")]
         [Tooltip("How far (m) the redirected wind reaches at most.")]
@@ -255,9 +259,12 @@ namespace Foundry.Triggers
             float length;
             if (reachMode == ReachMode.MatchSource)
             {
-                // Exact reflection: the wind carries on as far as it would have, still fading as it would have
-                length = Mathf.Max(incoming.Remaining, 0.1f);
+                // Exact reflection: the wind carries on as far as it would have, still fading as it would have - both
+                // stretched by the multiplier (scaling the falloff's start and end keeps the same curve, just longer)
+                length = Mathf.Max(incoming.Remaining * reflectionMultiplier, 0.1f);
                 redirect.Falloff = incoming.Falloff;
+                redirect.Falloff.StartDistance *= reflectionMultiplier;
+                redirect.Falloff.MaxDistance *= reflectionMultiplier;
             }
             else
             {
@@ -266,7 +273,7 @@ namespace Foundry.Triggers
                 float distanceScale = incoming.Falloff.Use && incoming.Falloff.MaxDistance > 0f
                     ? Mathf.Clamp01(incoming.Falloff.Curve.Evaluate(Mathf.Clamp01(incoming.Falloff.StartDistance / incoming.Falloff.MaxDistance)))
                     : 1f;
-                length = Mathf.Max(scaleReachWithStrength ? reach * distanceScale : reach, 0.1f);
+                length = Mathf.Max((scaleReachWithStrength ? reach * distanceScale : reach) * reflectionMultiplier, 0.1f);
                 redirect.Falloff = new ReflectedFalloff { Use = useFalloff, Curve = falloffCurve, MaxDistance = length };
             }
 
@@ -347,7 +354,7 @@ namespace Foundry.Triggers
                 return;
             }
 
-            float previewLength = reachMode == ReachMode.Fixed ? reach : 2f;
+            float previewLength = reachMode == ReachMode.Fixed ? reach * reflectionMultiplier : 2f;
             WindTrigger3D.DrawGizmoArrow(transform.position, OutgoingDirection, previewLength, WindTrigger3D.WithAlpha(GizmoRedirectColor, 0.45f));
             WindTrigger3D.DrawGizmoLabel(transform.position + OutgoingDirection * previewLength, $"{name}: no wind hitting it\nwould redirect {OutgoingDirection:F1} at {strengthPercent:0}%");
         }
@@ -427,7 +434,7 @@ namespace Foundry.Triggers
             WindTrigger3D.DrawGizmoLabel(
                 redirect.BasePoint + outgoing * redirect.Size.z,
                 $"{name}: {redirect.Speed:0.#} m/s ({percentOfIncoming:P0} of {source}'s {incoming.Speed:0.#} m/s)\n" +
-                $"reach {redirect.Size.z:0.0} m{(reachMode == ReachMode.MatchSource ? " (matches source)" : "")} · width {redirect.Size.x:0.0} × {redirect.Size.y:0.0} m");
+                $"reach {redirect.Size.z:0.0} m{(reachMode == ReachMode.MatchSource ? " (matches source)" : "")}{(Mathf.Approximately(reflectionMultiplier, 1f) ? "" : $" ×{reflectionMultiplier:0.##}")} · width {redirect.Size.x:0.0} × {redirect.Size.y:0.0} m");
         }
 #endif
     }
