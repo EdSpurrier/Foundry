@@ -23,8 +23,28 @@ namespace Foundry.Triggers
 
         private const float EMITTER_THICKNESS = 0.1f;
 
+        // Refit when the wind's speed changes by more than this fraction (redirected wind changes every step)
+        private const float SPEED_REFIT_THRESHOLD = 0.05f;
+
         private WindTrigger3D _wind;
         private bool _emitting = true;
+
+        // False for a reflector's redirected wind: it has no emitter of its own, only particles handed on round the bend
+        private bool _emitsOwnParticles = true;
+        private int _fittedZoneVersion = -1;
+        private float _fittedVelocity;
+        private float _fittedSpeedScale;
+        private Vector3 _emitterBase;
+
+        // The visual whose look this one copied (a reflector's redirected wind copies its source's) - its Speed Scale
+        // is followed live, so tuning the source retunes the particles it hands round the bend
+        private WindVisual _lookSource;
+
+        private float SpeedScale => _lookSource != null ? _lookSource.speedScale : speedScale;
+        private Vector3 _fittedDirection;
+        private ParticleSystem.Particle[] _particleBuffer;
+
+        public bool HasParticles => particles != null;
 
         private void Awake()
         {
@@ -38,13 +58,135 @@ namespace Foundry.Triggers
                 return;
 
             // Emission off rather than Stop(), so particles already in the air finish their flight
-            bool shouldEmit = _wind.IsActive;
-            if (shouldEmit == _emitting)
+            bool shouldEmit = _emitsOwnParticles && _wind.IsBlowing;
+            if (shouldEmit != _emitting)
+            {
+                _emitting = shouldEmit;
+                ParticleSystem.EmissionModule emission = particles.emission;
+                emission.enabled = shouldEmit;
+            }
+
+            // The zone gets shorter/longer as blockers move in and out, and redirected wind changes speed and place
+            bool speedChanged = Mathf.Abs(_wind.Velocity - _fittedVelocity) > _fittedVelocity * SPEED_REFIT_THRESHOLD;
+            if (_wind.ZoneVersion != _fittedZoneVersion || speedChanged || !Mathf.Approximately(SpeedScale, _fittedSpeedScale))
+                FitToZone();
+
+            if (_wind.IsObstructed)
+                CullPastBlocker();
+        }
+
+        // Particles reaching the point where the wind is blocked stop there: if a reflector is redirecting it, each one
+        // is handed on round the bend to the redirected wind's visual (so the stream visibly turns); anything else just
+        // absorbs the wind, so they end - otherwise particles already in flight would sail straight through a blocker.
+        private void CullPastBlocker()
+        {
+            if (particles.particleCount == 0)
                 return;
 
-            _emitting = shouldEmit;
-            ParticleSystem.EmissionModule emission = particles.emission;
-            emission.enabled = shouldEmit;
+            int capacity = particles.main.maxParticles;
+            if (_particleBuffer == null || _particleBuffer.Length < capacity)
+                _particleBuffer = new ParticleSystem.Particle[capacity];
+
+            WindReflector reflector = _wind.CurrentReflector;
+            WindVisual handOffTarget = reflector != null ? reflector.RedirectVisual : null;
+            if (handOffTarget != null && !handOffTarget.HasParticles)
+                handOffTarget = null;
+
+            int count = particles.GetParticles(_particleBuffer);
+            float limit = _wind.CurrentLength;
+            bool changed = false;
+
+            for (int i = 0; i < count; i++)
+            {
+                float along = Vector3.Dot(_particleBuffer[i].position - _emitterBase, _fittedDirection);
+                if (along <= limit)
+                    continue;
+
+                if (handOffTarget != null)
+                {
+                    Vector3 crossing = _particleBuffer[i].position - _fittedDirection * (along - limit);
+                    handOffTarget.ContinueParticle(_particleBuffer[i], reflector.BendPosition(crossing));
+                }
+
+                _particleBuffer[i].remainingLifetime = 0f;
+                changed = true;
+            }
+
+            if (changed)
+                particles.SetParticles(_particleBuffer, count);
+        }
+
+        // Carries on a particle handed over from the wind feeding this one (at a reflector): same size, colour, rotation
+        // and spin, now blowing along this wind at its speed for its whole length
+        private void ContinueParticle(in ParticleSystem.Particle source, Vector3 position)
+        {
+            float speed = Mathf.Max(_wind.Velocity * SpeedScale, 0.01f);
+
+            ParticleSystem.EmitParams continued = new()
+            {
+                position = position,
+                velocity = _wind.Direction * speed,
+                startSize3D = source.startSize3D,
+                startColor = source.startColor,
+                rotation3D = source.rotation3D,
+                angularVelocity3D = source.angularVelocity3D,
+                startLifetime = Mathf.Max(_wind.CurrentLength / speed, 0.1f),
+                applyShapeToPosition = false
+            };
+
+            particles.Emit(continued, 1);
+        }
+
+        // Gives this visual the same look as another: copies its particle system and settings. handOffOnly (used for a
+        // reflector's redirected wind): no emitter of its own - it only carries on particles handed over at the bend,
+        // and they don't fade in again there (they're the same particles, just turning a corner).
+        public void CopyLookFrom(WindVisual template, bool handOffOnly = false)
+        {
+            if (template == null || template.particles == null)
+                return;
+
+            particles = Instantiate(template.particles, transform);
+            particles.name = template.particles.name;
+            density = template.density;
+            speedScale = template.speedScale;
+            _lookSource = template;
+            _wind = GetComponent<WindTrigger3D>();
+            _emitsOwnParticles = !handOffOnly;
+
+            if (handOffOnly)
+            {
+                ParticleSystem.EmissionModule emission = particles.emission;
+                emission.enabled = false;
+                _emitting = false;
+                SkipFadeIn(particles);
+            }
+
+            FitToZone();
+        }
+
+        // Starts the colour-over-lifetime fade at full opacity instead of fading in
+        private static void SkipFadeIn(ParticleSystem system)
+        {
+            ParticleSystem.ColorOverLifetimeModule fade = system.colorOverLifetime;
+            if (!fade.enabled || fade.color.mode != ParticleSystemGradientMode.Gradient || fade.color.gradient == null)
+                return;
+
+            Gradient gradient = fade.color.gradient;
+            GradientAlphaKey[] alphas = gradient.alphaKeys;
+            float peak = 0f;
+            foreach (GradientAlphaKey key in alphas)
+                peak = Mathf.Max(peak, key.alpha);
+
+            // Everything before the peak is the fade-in - hold it at the peak instead
+            for (int i = 0; i < alphas.Length; i++)
+            {
+                if (alphas[i].alpha >= peak) break;
+                alphas[i].alpha = peak;
+            }
+
+            Gradient continued = new();
+            continued.SetKeys(gradient.colorKeys, alphas);
+            fade.color = continued;
         }
 
         [Button("Fit To Zone")]
@@ -60,7 +202,12 @@ namespace Foundry.Triggers
 
             // Emitter is a thin slab across the zone's base, facing along Direction (a Box shape emits along its local Z)
             Transform emitter = particles.transform;
-            emitter.SetPositionAndRotation(center - direction * (length * 0.5f - EMITTER_THICKNESS * 0.5f), rotation);
+            _emitterBase = center - direction * (length * 0.5f);
+            _fittedDirection = direction;
+            _fittedZoneVersion = wind.ZoneVersion;
+            _fittedVelocity = wind.Velocity;
+            _fittedSpeedScale = SpeedScale;
+            emitter.SetPositionAndRotation(_emitterBase + direction * (EMITTER_THICKNESS * 0.5f), rotation);
             emitter.localScale = Vector3.one;
 
             ParticleSystem.MainModule main = particles.main;
@@ -68,7 +215,7 @@ namespace Foundry.Triggers
             main.scalingMode = ParticleSystemScalingMode.Local;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
 
-            float speed = Mathf.Max(wind.Velocity * speedScale, 0.01f);
+            float speed = Mathf.Max(wind.Velocity * SpeedScale, 0.01f);
             main.startSpeed = speed;
             main.startLifetime = Mathf.Max(length / speed, 0.1f);
 
