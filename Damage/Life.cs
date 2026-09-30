@@ -1,6 +1,8 @@
 ﻿using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Linq;
+using Foundry.Data;
+using Foundry.Interaction;
 using FrameCoreU.Events;
 using UnityEngine;
 
@@ -14,7 +16,10 @@ namespace Foundry.Damage
         Inactive
     }
 
-    public class Life : MonoBehaviour, IDamageReceiver
+    // Life points that damage takes away, with stages along the way (e.g. cracked at 50, shattered at 20) and death at
+    // zero. Strikes (e.g. the chicken's peck) damage it too, by their Damage - so a window can crack then break, or a
+    // beam give way after a few pecks.
+    public class Life : MonoBehaviour, IDamageReceiver, IStrikeReceiver
     {
         [HideLabel]
         [HorizontalGroup("Split", 0.3f)]
@@ -40,6 +45,13 @@ namespace Foundry.Damage
             public FrameCoreEvent stageActivateEvent;
         }
 
+
+        [Tooltip("Strikes (e.g. a peck) damage it by their Damage. Off = only other damage (explosions, raycasts...) hurts it.")]
+        public bool damagedByStrikes = true;
+
+        [ShowIf(nameof(damagedByStrikes))]
+        [Tooltip("Only strikes of this kind damage it (e.g. \"Peck\"). Empty = any strike.")]
+        public string strikeKind;
 
         [ReadOnly]
         public LifeStage currentLifeStage { get; set; }
@@ -76,6 +88,27 @@ namespace Foundry.Damage
                 return;
 
             Damage(damageData.amount);
+        }
+
+        public void OnStrike(in StrikeData strike)
+        {
+            if (!damagedByStrikes || strike.Damage <= 0)
+                return;
+            if (!string.IsNullOrEmpty(strikeKind) && strike.Kind != strikeKind)
+                return;
+
+            ApplyDamage(new DamageData
+            {
+                amount = strike.Damage,
+                damageType = DamageType.Strike,
+                source = strike.Source,
+                instigator = strike.Instigator,
+                target = gameObject,
+                point = strike.Point,
+                direction = strike.Direction,
+                normal = strike.Normal,
+                force = strike.Impulse
+            });
         }
 
         public void Damage(int amount)

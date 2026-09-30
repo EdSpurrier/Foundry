@@ -92,15 +92,30 @@ namespace Foundry.Triggers
             };
         }
 
+        // Tells every enabled IImpactReceiver on the nearest object that has any, starting from the collider that was
+        // hit and working up its parents (so a receiver can sit on a parent of the collider) - same as strikes
         protected virtual void NotifyImpactReceiver(ImpactData impactData)
         {
             if (impactData == null || impactData.target == null)
                 return;
 
-            IImpactReceiver receiver = impactData.target.GetComponent<IImpactReceiver>();
+            Transform from = impactData.collider3D != null ? impactData.collider3D.transform : impactData.target.transform;
+            for (Transform current = from; current != null; current = current.parent)
+            {
+                current.GetComponents(ReceiverBuffer);
+                ReceiverBuffer.RemoveAll(receiver => receiver is Behaviour behaviour && !behaviour.isActiveAndEnabled);
+                if (ReceiverBuffer.Count == 0)
+                    continue;
 
-            receiver?.OnImpact(impactData);
+                IImpactReceiver[] receivers = ReceiverBuffer.ToArray();
+                ReceiverBuffer.Clear();
+                foreach (IImpactReceiver receiver in receivers)
+                    receiver.OnImpact(impactData);
+                return;
+            }
         }
+
+        private static readonly System.Collections.Generic.List<IImpactReceiver> ReceiverBuffer = new();
 
         protected virtual void Impact(ImpactData impactData)
         {

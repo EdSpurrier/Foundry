@@ -126,6 +126,7 @@ General:
 - `Activate` (class `Activator`) — set a list of GameObjects active.
 - `Deactivate` (class `Deactivator`) — set a list of GameObjects inactive.
 - `Destroy` — destroy a GameObject / set of GameObjects.
+- `InteractableAction` (0.8.0) — use Interactables from any event: Use, Turn On, Turn Off, Flip or Reset. For example, a `VolumeTrigger3D`, a timer or another switch can drive one.
 - `Despawn` — return GameObjects to the pool they were spawned from (destroying any that weren't pooled), with an optional delay. Use this rather than `Destroy` for anything created by `Spawn`. Requires FrameCoreU `0.3.0`.
 - `Parent` — parent a Transform to another.
 - `Unparent` — clear a Transform's parent.
@@ -166,11 +167,40 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 - `IParticleAffector` / `ParticleAffectors` — the interface anything that moves particles implements (`Affect(position, velocity, sensitivity, dt)` → new velocity), and the registry affectors join while enabled. `WindTrigger3D` is one; a water current, vortex or explosion could be others without touching `ParticlePhysics`.
 
 ### Damage
-- `DamageData` / `DamageType` — a damage payload: amount, type (`Generic`, `Bullet`, `Explosion`, `Impact`, `Fire`), source/instigator/target, hit point/direction/normal, and force.
+- `DamageData` / `DamageType` — a damage payload: amount, type (`Generic`, `Bullet`, `Explosion`, `Impact`, `Fire`, `Strike`), source/instigator/target, hit point/direction/normal, and force.
 - `IDamageReceiver` — `ApplyDamage(DamageData)`; implement it on anything that can be hurt. Same dispatch shape as `IImpactReceiver` — Foundry delivers the damage, the receiver decides what it means.
-- `Life` — a generic health component implementing `IDamageReceiver`: life points with a max, `Damage`/`Heal`/`Die`/`ResetLife`, `hurtEvent`/`healEvent`/`deathEvent`, and optional **life stages** that fire their own event when life drops to a threshold (e.g. a boss changing phase at half health).
+- `Life` — a generic health component implementing `IDamageReceiver`: life points with a max, `Damage`/`Heal`/`Die`/`ResetLife`, `hurtEvent`/`healEvent`/`deathEvent`, and optional **life stages** that fire their own event when life drops to a threshold (e.g. a boss changing phase at half health). It's also an `IStrikeReceiver` (0.8.0): strikes, such as the chicken's peck, damage it by their `Damage`. It has a `damagedByStrikes` toggle and an optional `strikeKind` filter. So a window can crack at a life stage and then break on death, or a beam can give way after a few pecks.
 - `ExplosionDamage` — `Explode()` damages every `IDamageReceiver` within a radius (layer-filtered), with optional linear distance falloff. Known quirk: it applies once per *collider* in range, so a receiver with several colliders is hit several times.
 - `RaycastDamage` — `Fire()` casts a ray forward from an origin; if the first thing it hits is (or is parented under) an `IDamageReceiver`, it's damaged. Optionally applies a physics force to the hit Rigidbody.
+
+### Interaction (0.8.0)
+- `StrikeData` / `IStrikeReceiver` / `Strike` — a deliberate hit on something, such as a peck or a hammer blow.
+  - Whoever strikes finds the collider and fills in a `StrikeData`: instigator, source, `Kind` (e.g. "Peck"), point, direction, normal, `Damage`, `Impulse` and `LaunchDirection`.
+  - `Strike.Dispatch` knocks a loose (non-kinematic) Rigidbody along the strike by the impulse. Lighter objects fly further, and off-centre hits make them spin.
+  - It then calls every enabled `IStrikeReceiver` on the nearest object that has any: the collider's own object, otherwise up its parents.
+  - Each receiver decides what a strike means, and each has an optional `strikeKind` filter.
+- `Interactable` — switches, buttons, levers and control panels.
+  - Modes: **Press** (On Interact on every use), **Toggle** (On Turned On / On Turned Off) or **Once**.
+  - It has a cooldown. It can be used by a strike (a peck), by something thrown into it (an egg, via its `ImpactTrigger3D`; `Impact Layers` and `Min Impact Speed`), or by `Interact()` / `InteractFrom(direction)` from anything else.
+  - **Use On Trigger:** something entering a trigger collider on the same object uses it: the chicken stepping onto it, a pushed rock or a rolling egg (`Trigger Layers`). For a Toggle, **On While Occupied** makes it a pressure plate: on while anything's inside, off when it empties, including when something inside is despawned.
+  - **Hit Direction** (optional) sets what a hit from each side does (from left / right / above / below): the mode's action, Turn On, Turn Off (Toggle only) or Ignore. It can apply to strikes, impacts or both, using the object's own sides or the world's. E.g. an egg from the left switches it on and one from the right switches it off.
+- `Consumable` — something that can be eaten. Each strike takes a bite. After `Bites To Eat` it's consumed: On Consumed fires (e.g. to grant a power-up), and it's despawned, or destroyed if it wasn't pooled.
+
+`ImpactTrigger3D` (0.8.0) now tells **every** enabled `IImpactReceiver` on the nearest object with any, starting from the collider it hit and working up its parents (it used to tell only the first one, on the hit object itself).
+
+### Ropes (0.8.0)
+- `Rope` — a physics rope, cable or cord: a chain of jointed segments (`ConfigurableJoint`s, planar by default) drawn as a line.
+  - It hangs from its own object to one of: an `End Body` (which swings, and falls when the rope is cut), a fixed `End Anchor` (a cable across a gap), or nothing (a loose end).
+  - Striking a segment (`RopeSegment`) cuts the rope there after `Strikes To Cut`.
+  - Also: `Max Cuts`, On Fray / On Cut events, and `CutAt()` / `DetachEnd()`.
+
+### Digging (0.8.0)
+- `DiggableTerrain` — dirt that can be dug through freely.
+  - It's a density grid in local X/Y, meshed with marching squares and extruded along Z, with a matching `MeshCollider`.
+  - The mesh is split into chunks, so each bite only rebuilds the chunks it touched.
+  - A strike bites a soft round hole (`Dig Radius`; `Hardness` is the number of strikes per full bite), so tunnels form wherever the player digs.
+  - Also: `Pre Dug` holes, a pooled `Dig Effect`, the On Dig event, and `Dig()` / `DensityAt()` / `IsSolidAt()`.
+- `BuriedObject` — something buried in the dirt. Its Rigidbody is held still until enough of the dirt around it is dug away (`Reveal Amount`); then it's freed and On Revealed fires.
 
 ### Camera System
 - `CameraCore` — stable API (`SetTarget`, `SetOffset`, `SetZoom`, `SetLookAhead`, `ResetCamera`, `FocusTemporary`) that the Camera Actions above call into.
