@@ -126,6 +126,7 @@ General:
 - `Activate` (class `Activator`) — set a list of GameObjects active.
 - `Deactivate` (class `Deactivator`) — set a list of GameObjects inactive.
 - `Destroy` — destroy a GameObject / set of GameObjects.
+- `EventManagerAction` (0.8.0) — start `EventManager` chains from any event: the EventManagers listed (optionally letting a Single Use one run again with **Allow Repeat**), or one from an `EventManagerLibrary` by name or at random. This lets several switches share one sequence.
 - `InteractableAction` (0.8.0) — use Interactables from any event: Use, Turn On, Turn Off, Flip or Reset. For example, a `VolumeTrigger3D`, a timer or another switch can drive one.
 - `Despawn` — return GameObjects to the pool they were spawned from (destroying any that weren't pooled), with an optional delay. Use this rather than `Destroy` for anything created by `Spawn`. Requires FrameCoreU `0.3.0`.
 - `Parent` — parent a Transform to another.
