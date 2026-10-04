@@ -90,18 +90,23 @@ namespace Foundry.Interaction
         [SuffixLabel("m/s", Overlay = true)]
         [SerializeField, Min(0f)] private float minImpactSpeed = 3f;
 
-        [Tooltip("Something entering a trigger collider on this object uses it - the chicken stepping onto a pressure plate, a pushed rock sliding onto it, an egg rolling into a slot. Needs a collider with Is Trigger on this same object (it can have a solid one as well).")]
+        [Tooltip("Something entering a trigger collider on this object uses it - the chicken stepping onto a pressure plate, a pushed rock sliding onto it, an egg rolling into a slot. Needs a collider with Is Trigger on this same object (it can have a solid one as well). Make the zone tall enough to reach into whatever stands on it: the chicken's body starts well above its feet.")]
         [InfoBox("Add a collider with Is Trigger ticked to this object for this to work.", InfoMessageType.Warning, nameof(MissingTrigger))]
         [SerializeField] private bool useOnTrigger;
 
         [ShowIf(nameof(useOnTrigger))]
-        [Tooltip("What can set it off, by layer (default: Player, Moveable, Egg). Nothing = anything.")]
+        [Tooltip("What can set it off, by layer (default: Player Feet, Player, Moveable, Egg). Nothing = any solid object. Trigger colliders only count when their layer is listed here - e.g. the chicken's feet sensor (Player Feet), so a thin zone on a plate senses it standing there.")]
         [SerializeField] private LayerMask triggerLayers;
 
         [ShowIf(nameof(ShowTriggerBehaviour))]
         [EnumToggleButtons]
         [Tooltip("Use On Enter: each thing entering counts as a hit (press / toggle, with the side rules). On While Occupied: a pressure plate - on while anything's in it, off when the last thing leaves.")]
         [SerializeField] private TriggerBehaviour triggerBehaviour = TriggerBehaviour.UseOnEnter;
+
+        [ShowIf(nameof(OccupancyMode))]
+        [Tooltip("How long (s) the zone must stay empty before it releases - stops it flickering when something bobs at the edge of the zone.")]
+        [SuffixLabel("s", Overlay = true)]
+        [SerializeField, Min(0f)] private float releaseDelay = 0.075f;
 
         [Title("Hit Direction")]
         [LabelText("Respond Per Side")]
@@ -159,10 +164,14 @@ namespace Foundry.Interaction
         private bool _startedOn;
         private Collider _trigger;
 
-        // Things inside the trigger, by their Rigidbody's object (or collider's) - counted per collider, since one
-        // thing can have several
-        private readonly Dictionary<GameObject, int> _inside = new();
-        private readonly List<GameObject> _stale = new();
+        // What's in the trigger zone, by Rigidbody object (or collider object), sensed fresh every physics step - with
+        // the collider each was found by (for which way it was moving). Sensing rather than trusting enter/exit
+        // messages: Unity sends no exit when a collider inside is switched off (the chicken swaps colliders as it
+        // lands and jumps) or its object is despawned, which would leave the zone thinking something's still there.
+        private Dictionary<GameObject, Collider> _inside = new();
+        private Dictionary<GameObject, Collider> _previous = new();
+        private readonly Collider[] _overlaps = new Collider[32];
+        private float _emptySince = -1f;
 
         private bool OccupancyMode => useOnTrigger && mode == InteractMode.Toggle && triggerBehaviour == TriggerBehaviour.OnWhileOccupied;
         private bool ShowTriggerBehaviour => useOnTrigger && mode == InteractMode.Toggle;
@@ -177,7 +186,7 @@ namespace Foundry.Interaction
         private void Reset()
         {
             impactLayers = LayerMask.GetMask("Egg");
-            triggerLayers = LayerMask.GetMask("Player", "Moveable", "Egg");
+            triggerLayers = LayerMask.GetMask("Player Feet", "Player", "Moveable", "Egg");
         }
 
         private void Awake()
@@ -186,73 +195,117 @@ namespace Foundry.Interaction
             _trigger = FindTrigger();
         }
 
-        private void OnTriggerEnter(Collider other)
+        private void FixedUpdate()
         {
-            if (!useOnTrigger || !CountsForTrigger(other))
+            if (!useOnTrigger)
                 return;
 
-            GameObject occupant = OccupantOf(other);
-            _inside.TryGetValue(occupant, out int colliders);
-            _inside[occupant] = colliders + 1;
+            if (_trigger == null)
+                _trigger = FindTrigger();
+            if (_trigger == null)
+                return;
+
+            (_previous, _inside) = (_inside, _previous);
+            SenseOccupants(_inside);
             occupants = _inside.Count;
-            if (colliders > 0)
-                return; // another collider of something already inside
 
             if (OccupancyMode)
             {
-                if (_inside.Count == 1)
-                    SetOccupied(true, occupant.name);
+                UpdateOccupancy();
                 return;
             }
 
+            // Use On Enter: each thing that wasn't in the zone last step is a hit
             bool sided = directional && (sideRulesApplyTo & HitSources.Triggers) != 0;
-            HandleHit(EntryDirection(other), sided, occupant.name);
+            foreach (KeyValuePair<GameObject, Collider> entry in _inside)
+            {
+                if (!_previous.ContainsKey(entry.Key))
+                    HandleHit(EntryDirection(entry.Value), sided, entry.Key.name);
+            }
         }
 
-        private void OnTriggerExit(Collider other)
+        // Pressure plate: on while anything's in the zone, off once it's been empty for Release Delay
+        private void UpdateOccupancy()
         {
-            GameObject occupant = OccupantOf(other);
-            if (!_inside.TryGetValue(occupant, out int colliders))
-                return;
-
-            if (colliders > 1)
+            if (_inside.Count > 0)
             {
-                _inside[occupant] = colliders - 1;
+                _emptySince = -1f;
+                if (!isOn)
+                {
+                    foreach (GameObject occupant in _inside.Keys)
+                    {
+                        SetOccupied(true, occupant.name);
+                        break;
+                    }
+                }
                 return;
             }
 
-            _inside.Remove(occupant);
-            occupants = _inside.Count;
-            if (OccupancyMode && _inside.Count == 0)
-                SetOccupied(false, occupant.name);
+            if (!isOn)
+                return;
+
+            if (_emptySince < 0f)
+                _emptySince = Time.time;
+            if (Time.time - _emptySince >= releaseDelay)
+                SetOccupied(false, "(empty)");
         }
 
-        // Something inside that was despawned or destroyed never sends an exit - drop it, or a pressure plate would
-        // stay down forever
-        private void FixedUpdate()
+        // Every enabled collider overlapping the trigger zone that counts (Trigger Layers), grouped by the thing it
+        // belongs to - switched-off colliders and despawned objects simply aren't found. Solid colliders count by
+        // Trigger Layers; trigger colliders only if their own layer is explicitly listed (a sensor like the chicken's
+        // feet), so wind zones and other trigger volumes passing through never do.
+        private void SenseOccupants(Dictionary<GameObject, Collider> into)
         {
-            if (_inside.Count == 0)
-                return;
+            into.Clear();
+            int count = OverlapZone(_overlaps);
 
-            foreach (GameObject occupant in _inside.Keys)
-                if (occupant == null || !occupant.activeInHierarchy)
-                    _stale.Add(occupant);
+            for (int i = 0; i < count; i++)
+            {
+                Collider other = _overlaps[i];
+                if (other == null || other.transform.IsChildOf(transform))
+                    continue;
+                if (other.isTrigger ? (triggerLayers.value & (1 << other.gameObject.layer)) == 0 : !CountsForTrigger(other))
+                    continue;
 
-            if (_stale.Count == 0)
-                return;
+                GameObject occupant = OccupantOf(other);
+                if (!into.ContainsKey(occupant))
+                    into.Add(occupant, other);
+            }
+        }
 
-            foreach (GameObject occupant in _stale)
-                _inside.Remove(occupant);
-            _stale.Clear();
-            occupants = _inside.Count;
+        private int OverlapZone(Collider[] results)
+        {
+            // Triggers included (sensors such as the chicken's feet) - SenseOccupants filters them by layer
+            const QueryTriggerInteraction QUERY = QueryTriggerInteraction.Collide;
 
-            if (OccupancyMode && _inside.Count == 0)
-                SetOccupied(false, "(left)");
+            switch (_trigger)
+            {
+                case BoxCollider box:
+                {
+                    Transform t = box.transform;
+                    Vector3 scale = t.lossyScale;
+                    Vector3 halfSize = Vector3.Scale(box.size, new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z))) * 0.5f;
+                    return Physics.OverlapBoxNonAlloc(t.TransformPoint(box.center), halfSize, results, t.rotation, ~0, QUERY);
+                }
+                case SphereCollider sphere:
+                {
+                    Transform t = sphere.transform;
+                    Vector3 scale = t.lossyScale;
+                    float radius = sphere.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
+                    return Physics.OverlapSphereNonAlloc(t.TransformPoint(sphere.center), radius, results, ~0, QUERY);
+                }
+                default:
+                {
+                    Bounds bounds = _trigger.bounds;
+                    return Physics.OverlapBoxNonAlloc(bounds.center, bounds.extents, results, Quaternion.identity, ~0, QUERY);
+                }
+            }
         }
 
         private void OnDisable()
         {
             _inside.Clear();
+            _previous.Clear();
             occupants = 0;
         }
 
@@ -312,6 +365,8 @@ namespace Foundry.Interaction
         {
             used = false;
             _inside.Clear();
+            _previous.Clear();
+            _emptySince = -1f;
             occupants = 0;
             isOn = _startedOn;
             cooldown.Clear();
