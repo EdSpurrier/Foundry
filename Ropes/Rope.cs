@@ -19,6 +19,10 @@ namespace Foundry.Ropes
         [Tooltip("What hangs from the end: a Rigidbody (swings on the rope, falls when it's cut). Leave empty for a fixed End Anchor or a loose end.")]
         [SerializeField] private Rigidbody endBody;
 
+        [ShowIf(nameof(endBody))]
+        [Tooltip("Tie the rope to the surface of the End Body nearest the rope (e.g. the top of a crate). Off = to its centre.")]
+        [SerializeField] private bool attachToSurface = true;
+
         [HideIf(nameof(endBody))]
         [Tooltip("A fixed point the far end is tied to (a cable across a gap). Leave empty (and no End Body) for a rope hanging loose.")]
         [SerializeField] private Transform endAnchor;
@@ -45,6 +49,10 @@ namespace Foundry.Ropes
 
         [Tooltip("Physics accuracy per segment - higher holds heavy loads more steadily.")]
         [SerializeField, Range(4, 60)] private int solverIterations = 20;
+
+        [Tooltip("How hard a strike (e.g. a peck) swings the rope: the most speed (m/s) it gives the segment it hits. A peck's full launch would yank the light segment and upset the whole chain.")]
+        [SuffixLabel("m/s", Overlay = true)]
+        [SerializeField, Min(0f)] private float strikeSwing = 1.5f;
 
         [Tooltip("Collide with the world (bump into walls, drape over things). Off = the segments are triggers: cheaper, never snags on anything, and can still be pecked.")]
         [SerializeField] private bool collideWithWorld;
@@ -104,6 +112,11 @@ namespace Foundry.Ropes
         private Material _runtimeMaterial;
         private float _halfSegment;
 
+        // A joint between bodies much heavier than each other is unstable - past this ratio the end joint treats the
+        // heavier End Body as lighter, so a heavy crate on a light rope doesn't set the chain shaking
+        private const float MAX_MASS_RATIO = 5f;
+
+        public float StrikeSwing => strikeSwing;
         public int SegmentCount => _segments.Count;
         public int Cuts => cuts;
         public bool IsCut => cuts > 0;
@@ -143,7 +156,7 @@ namespace Foundry.Ropes
 
             if (endBody != null || endAnchor != null)
             {
-                end = endBody != null ? endBody.position : endAnchor.position;
+                end = endBody != null ? (attachToSurface ? SurfacePoint(endBody, start) : endBody.position) : endAnchor.position;
                 ropeLength = Vector3.Distance(start, end) * slack;
             }
             else
@@ -151,6 +164,31 @@ namespace Foundry.Ropes
                 end = start + Vector3.down * length;
                 ropeLength = length;
             }
+        }
+
+        // The point on a body's own solid colliders nearest a point (e.g. the top of a crate, from the rope above it)
+        private static Vector3 SurfacePoint(Rigidbody body, Vector3 toward)
+        {
+            Vector3 best = body.position;
+            float bestDistance = float.MaxValue;
+
+            foreach (Collider collider in body.GetComponentsInChildren<Collider>())
+            {
+                if (collider.isTrigger || !collider.enabled || collider.attachedRigidbody != body)
+                    continue;
+
+                // ClosestPoint only works on convex shapes
+                bool convex = collider is BoxCollider || collider is SphereCollider || collider is CapsuleCollider || (collider is MeshCollider mesh && mesh.convex);
+                Vector3 point = convex ? collider.ClosestPoint(toward) : collider.ClosestPointOnBounds(toward);
+                float distance = (point - toward).sqrMagnitude;
+                if (distance >= bestDistance)
+                    continue;
+
+                best = point;
+                bestDistance = distance;
+            }
+
+            return best;
         }
 
         private void Build()
@@ -205,7 +243,13 @@ namespace Foundry.Ropes
             body.linearDamping = segmentDrag;
             body.angularDamping = segmentDrag;
             body.solverIterations = solverIterations;
+            body.solverVelocityIterations = Mathf.Max(4, solverIterations / 2);
             body.interpolation = RigidbodyInterpolation.Interpolate;
+
+            // Safety limits: a hard knock can't fling a segment fast enough to tear the chain apart
+            body.maxLinearVelocity = 30f;
+            body.maxAngularVelocity = 25f;
+            body.maxDepenetrationVelocity = 2f;
             if (planar)
                 body.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY;
 
@@ -236,6 +280,9 @@ namespace Foundry.Ropes
             joint.yMotion = ConfigurableJointMotion.Locked;
             joint.zMotion = ConfigurableJointMotion.Locked;
 
+            // Unity's advice for chains that jitter or explode
+            joint.enablePreprocessing = false;
+
             if (planar)
             {
                 // Its primary axis along world Z, so angular X is the in-plane swing
@@ -252,9 +299,14 @@ namespace Foundry.Ropes
                 joint.angularZMotion = ConfigurableJointMotion.Free;
             }
 
-            // Whatever hangs from the end stays free to turn as it swings
+            // Whatever hangs from the end stays free to turn as it swings - and if it's much heavier than a segment,
+            // the joint treats it as lighter (scaling up its inverse mass), keeping the ratio solvable
             if (atBottom && other != null)
             {
+                float ratio = other.mass / Mathf.Max(segment.mass, 0.0001f);
+                if (ratio > MAX_MASS_RATIO)
+                    joint.connectedMassScale = ratio / MAX_MASS_RATIO;
+
                 joint.angularXMotion = ConfigurableJointMotion.Free;
                 joint.angularYMotion = ConfigurableJointMotion.Free;
                 joint.angularZMotion = ConfigurableJointMotion.Free;

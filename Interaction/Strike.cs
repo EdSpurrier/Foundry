@@ -83,8 +83,14 @@ namespace Foundry.Interaction
             if (direction == Vector3.zero)
                 return false;
 
+            Vector3 impulse = direction * strike.Impulse;
+            if (strike.Collider.TryGetComponent(out IStrikeLaunchModifier modifier))
+                impulse = modifier.ModifyLaunch(strike, body, impulse);
+            if (impulse.sqrMagnitude < 1e-8f)
+                return false;
+
             // At the struck point, so an off-centre hit sends it spinning
-            body.AddForceAtPosition(direction * strike.Impulse, strike.Point, ForceMode.Impulse);
+            body.AddForceAtPosition(impulse, strike.Point, ForceMode.Impulse);
             return true;
         }
     }

@@ -170,7 +170,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 ### Damage
 - `DamageData` / `DamageType` — a damage payload: amount, type (`Generic`, `Bullet`, `Explosion`, `Impact`, `Fire`, `Strike`), source/instigator/target, hit point/direction/normal, and force.
 - `IDamageReceiver` — `ApplyDamage(DamageData)`; implement it on anything that can be hurt. Same dispatch shape as `IImpactReceiver` — Foundry delivers the damage, the receiver decides what it means.
-- `Life` — a generic health component implementing `IDamageReceiver`: life points with a max, `Damage`/`Heal`/`Die`/`ResetLife`, `hurtEvent`/`healEvent`/`deathEvent`, and optional **life stages** that fire their own event when life drops to a threshold (e.g. a boss changing phase at half health). It's also an `IStrikeReceiver` (0.8.0): strikes, such as the chicken's peck, damage it by their `Damage`. It has a `damagedByStrikes` toggle and an optional `strikeKind` filter. So a window can crack at a life stage and then break on death, or a beam can give way after a few pecks.
+- `Life` — a generic health component implementing `IDamageReceiver`: life points with a max, `Damage`/`Heal`/`Die`/`ResetLife`, `hurtEvent`/`healEvent`/`deathEvent`, and optional **life stages** that fire their own event when life drops to a threshold (e.g. a boss changing phase at half health). It's also an `IStrikeReceiver` (0.8.0): strikes, such as the chicken's peck, damage it by their `Damage`. It has a `damagedByStrikes` toggle and an optional `strikeKind` filter. It's also an `IImpactReceiver`: with **Damaged By Impacts**, things thrown into it, such as eggs (`Impact Layers`), damage it if they hit at `Min Impact Speed` or faster, for `Impact Damage` plus an optional `Damage Per Extra Speed`. So each breakable can need pecks, eggs, or either. A window can crack at a life stage and then break on death, or a beam can give way after a few pecks or eggs.
 - `ExplosionDamage` — `Explode()` damages every `IDamageReceiver` within a radius (layer-filtered), with optional linear distance falloff. Known quirk: it applies once per *collider* in range, so a receiver with several colliders is hit several times.
 - `RaycastDamage` — `Fire()` casts a ray forward from an origin; if the first thing it hits is (or is parented under) an `IDamageReceiver`, it's damaged. Optionally applies a physics force to the hit Rigidbody.
 
@@ -194,6 +194,8 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
   - It hangs from its own object to one of: an `End Body` (which swings, and falls when the rope is cut), a fixed `End Anchor` (a cable across a gap), or nothing (a loose end).
   - Striking a segment (`RopeSegment`) cuts the rope there after `Strikes To Cut`.
   - Also: `Max Cuts`, On Fray / On Cut events, and `CutAt()` / `DetachEnd()`.
+  - A strike only swings it (`Strike Swing`, m/s). It's tuned to stay stable under heavy loads, and ties to the top of the End Body (`Attach To Surface`).
+- `IStrikeLaunchModifier` — put on a struck collider's object to change or cancel the knock a strike gives it (rope segments use it to swing rather than launch).
 
 ### Digging (0.8.0)
 - `DiggableTerrain` — dirt that can be dug through freely.
