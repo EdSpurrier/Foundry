@@ -192,7 +192,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 ### Ropes (0.8.0)
 - `Rope` — a physics rope, cable or cord: a chain of jointed segments (`ConfigurableJoint`s, planar by default) drawn as a line.
   - It hangs from its own object to one of: an `End Body` (which swings, and falls when the rope is cut), a fixed `End Anchor` (a cable across a gap), or nothing (a loose end).
-  - Striking a segment (`RopeSegment`) cuts the rope there after `Strikes To Cut`.
+  - Striking a segment (`RopeSegment`), or an egg (anything thrown, `Impact Layers`) flying through it at `Min Impact Speed` or faster (`Cut By Impact`), cuts the rope there after `Hits To Cut`.
   - Also: `Max Cuts`, On Fray / On Cut events, and `CutAt()` / `DetachEnd()`.
   - A strike only swings it (`Strike Swing`, m/s). It's tuned to stay stable under heavy loads, and ties to the top of the End Body (`Attach To Surface`).
 - `IStrikeLaunchModifier` — put on a struck collider's object to change or cancel the knock a strike gives it (rope segments use it to swing rather than launch).

@@ -68,14 +68,27 @@ namespace Foundry.Ropes
         [SerializeField] private bool cutByStrike = true;
 
         [ShowIf(nameof(cutByStrike))]
-        [Tooltip("How many strikes it takes to cut (anywhere along it) - a tough cable might take several pecks.")]
-        [SerializeField, Min(1)] private int strikesToCut = 1;
-
-        [ShowIf(nameof(cutByStrike))]
         [Tooltip("Only strikes of this kind cut it (e.g. \"Peck\"). Empty = any strike.")]
         [SerializeField] private string strikeKind;
 
-        [ShowIf(nameof(cutByStrike))]
+        [Tooltip("Something thrown or shot through it fast enough (e.g. an egg) cuts it - flying straight through it if the segments are triggers (the default), or hitting it if they Collide With World.")]
+        [SerializeField] private bool cutByImpact = true;
+
+        [ShowIf(nameof(cutByImpact))]
+        [Tooltip("Which thrown objects cut it, by their layer. Empty = the Egg layer.")]
+        [SerializeField] private LayerMask impactLayers;
+
+        [ShowIf(nameof(cutByImpact))]
+        [Tooltip("How fast (m/s) it must be hit - an egg drifting into it doesn't cut it.")]
+        [SuffixLabel("m/s", Overlay = true)]
+        [SerializeField, Min(0f)] private float minImpactSpeed = 4f;
+
+        [ShowIf(nameof(CanBeCut))]
+        [LabelText("Hits To Cut")]
+        [Tooltip("How many hits (pecks and/or thrown objects, anywhere along it) it takes to cut - a tough cable might take several.")]
+        [SerializeField, Min(1)] private int strikesToCut = 1;
+
+        [ShowIf(nameof(CanBeCut))]
         [Tooltip("How many times it can be cut. 1 = once (the usual - it snaps and what it held falls); more = can be chopped into pieces.")]
         [SerializeField, Min(1)] private int maxCuts = 1;
 
@@ -125,6 +138,12 @@ namespace Foundry.Ropes
         public event Action<Rope, int> Cut;
 
         private bool HasEnd => endBody != null || endAnchor != null;
+        private bool CanBeCut => cutByStrike || cutByImpact;
+
+        // An egg flying through crosses several segments - one throw counts as one hit
+        private const float SAME_THROW_WINDOW = 0.3f;
+        private GameObject _lastThrown;
+        private float _lastThrownTime = -1f;
 
         private void Reset()
         {
@@ -133,6 +152,9 @@ namespace Foundry.Ropes
 
         private void Awake()
         {
+            if (impactLayers.value == 0)
+                impactLayers = LayerMask.GetMask("Egg");
+
             Build();
         }
 
@@ -322,9 +344,33 @@ namespace Foundry.Ropes
         // A strike on one of its segments (from RopeSegment)
         internal void OnSegmentStruck(int index, string kind)
         {
-            if (!cutByStrike || cuts >= maxCuts)
+            if (!cutByStrike)
                 return;
             if (!string.IsNullOrEmpty(strikeKind) && kind != strikeKind)
+                return;
+
+            RegisterHit(index);
+        }
+
+        // Something thrown into / through one of its segments (from RopeSegment): the thrown object, its layer, and how
+        // fast it was going relative to the segment
+        internal void OnSegmentThrownInto(int index, GameObject thrown, int layer, float speed)
+        {
+            if (!cutByImpact || thrown == null || speed < minImpactSpeed)
+                return;
+            if ((impactLayers.value & (1 << layer)) == 0 && (impactLayers.value & (1 << thrown.layer)) == 0)
+                return;
+            if (thrown == _lastThrown && Time.time - _lastThrownTime < SAME_THROW_WINDOW)
+                return;
+
+            _lastThrown = thrown;
+            _lastThrownTime = Time.time;
+            RegisterHit(index);
+        }
+
+        private void RegisterHit(int index)
+        {
+            if (cuts >= maxCuts)
                 return;
 
             strikesTaken++;
