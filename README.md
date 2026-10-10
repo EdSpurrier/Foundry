@@ -254,6 +254,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.8.0` | `0.3.0` |
 | `0.7.0` | `0.3.0` |
 | `0.6.0` | `0.3.0` |
 | `0.5.0` | `0.3.0` (minimum — the `Despawn` action needs its pool despawn) |
