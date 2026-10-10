@@ -8,7 +8,8 @@ namespace Foundry.Damage
         Bullet,
         Explosion,
         Impact,
-        Fire
+        Fire,
+        Strike
     }
 
     [System.Serializable]
