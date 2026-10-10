@@ -203,6 +203,9 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
   - The mesh is split into chunks, so each bite only rebuilds the chunks it touched.
   - A strike bites a soft round hole (`Dig Radius`; `Hardness` is the number of strikes per full bite), so tunnels form wherever the player digs.
   - Also: `Pre Dug` holes, a pooled `Dig Effect`, the On Dig event, and `Dig()` / `DensityAt()` / `IsSolidAt()`.
+  - **Mode:** **Through**, the original behaviour, where each bite cuts straight through the block. Or **Rounded**, a 3D grid where each bite scoops a sphere, so tunnels are rounded hollows inside the dirt.
+  - For Rounded mode, give the dirt a material using the **`Foundry/Dirt (See-Through)`** shader, and put a **`SeeThroughWindow`** on the player. A soft window then opens in the dirt in front of the chicken, showing a slice through the dirt at its plane: solid where undug, tunnels where dug.
+- `SeeThroughWindow` — opens that window around the object it's on (`Radius`, `Softness`, `Offset`).
 - `BuriedObject` — something buried in the dirt. Its Rigidbody is held still until enough of the dirt around it is dug away (`Reveal Amount`); then it's freed and On Revealed fires.
 
 ### Camera System

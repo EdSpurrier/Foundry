@@ -11,10 +11,14 @@ using UnityEngine.Rendering;
 namespace Foundry.Digging
 {
     // A block of dirt (or clay, sand, snow...) that can be dug through freely. Striking it (e.g. the chicken pecking it)
-    // bites a round hole out where it's hit, so tunnels and pathways form wherever the player digs, and anything
-    // buried in it (see BuriedObject) is uncovered. The dirt is a grid of density samples in this object's local X/Y
-    // plane, rebuilt as a smooth-edged mesh (marching squares) extruded Depth along Z, with a matching collider to walk
-    // on - split into chunks so a bite only rebuilds what it touched.
+    // bites a hole out where it's hit, so tunnels and pathways form wherever the player digs, and anything buried in
+    // it (see BuriedObject) is uncovered. Two modes:
+    //  - Through: a grid of density samples in local X/Y, rebuilt as a smooth-edged mesh (marching squares) extruded
+    //    Depth along Z - each bite cuts straight through the block (a see-through hole). Cheap; good for thin things.
+    //  - Rounded: a 3D grid (DirtVolume) - each bite scoops a sphere, so tunnels are rounded hollows inside the dirt.
+    //    The dirt stays in front of the chicken; give it a material using the "Foundry/Dirt (See-Through)" shader and
+    //    put a SeeThroughWindow on the player to see the chicken (and its tunnels) through a window in the dirt.
+    // Either way it has a matching collider to walk on, split into chunks so a bite only rebuilds what it touched.
     //
     // Centred on this object; its front face is towards -Z (the camera side in a 2.5D level). Put it on the Ground layer
     // so the chicken can stand on it. Keep its rotation and scale at their defaults.
@@ -32,7 +36,17 @@ namespace Foundry.Digging
         private const int CHUNK_CELLS = 16;
         private const float ISO = 0.5f;
 
+        public enum DigMode
+        {
+            Through,    // bites cut straight through the block (2D, extruded)
+            Rounded     // bites scoop spheres - rounded tunnels inside the dirt (3D)
+        }
+
         [Title("Shape")]
+        [EnumToggleButtons]
+        [Tooltip("Through: each bite cuts straight through the block (see-through holes; cheap - good for hedges, thin walls). Rounded: each bite scoops a sphere, so tunnels are rounded hollows inside the dirt - use the Foundry/Dirt (See-Through) shader and a SeeThroughWindow on the player to see inside.")]
+        [SerializeField] private DigMode mode = DigMode.Through;
+
         [Tooltip("Width x height (m) of the dirt, centred on this object (local X/Y).")]
         [SerializeField] private Vector2 size = new(6f, 3f);
 
@@ -42,7 +56,11 @@ namespace Foundry.Digging
         [Tooltip("Size (m) of each density cell - smaller gives smoother, more detailed holes but more mesh to rebuild.")]
         [SerializeField, Range(0.05f, 0.5f)] private float cellSize = 0.1f;
 
-        [Tooltip("Holes already dug when the level starts (local X/Y centre and radius, in metres).")]
+        [ShowIf(nameof(mode), DigMode.Rounded)]
+        [Tooltip("Where the chicken walks, as a local Z offset (0 = the middle of the dirt's depth - put this object at the chicken's Z). Bites, pre-dug holes and the see-through window's slice are centred on it.")]
+        [SerializeField] private float playPlane;
+
+        [Tooltip("Holes already dug when the level starts (local X/Y centre and radius, in metres - spheres on the play plane in Rounded mode).")]
         [SerializeField] private List<Hole> preDug = new();
 
         [Title("Digging")]
@@ -66,7 +84,8 @@ namespace Foundry.Digging
         [Tooltip("Material for the front and back faces.")]
         [SerializeField] private Material material;
 
-        [Tooltip("Material for the dug edges and tunnel walls. Empty = the same as Material.")]
+        [ShowIf(nameof(mode), DigMode.Through)]
+        [Tooltip("Material for the dug edges and tunnel walls. Empty = the same as Material. (Rounded mode uses Material everywhere - the see-through shader tints steep walls with its Side Color.)")]
         [SerializeField] private Material sideMaterial;
 
         [Tooltip("Texture repeats per metre (UVs are laid out in world units).")]
@@ -92,6 +111,7 @@ namespace Foundry.Digging
         private Chunk[] _chunks;
         private int _chunksX, _chunksY;
         private readonly MeshBuilder _builder = new();
+        private DirtVolume _volume;
 
         // Fires with the world point and radius of every bite dug
         public event Action<Vector3, float> Dug;
@@ -106,6 +126,16 @@ namespace Foundry.Digging
 
         private void Awake()
         {
+            if (mode == DigMode.Rounded)
+            {
+                _volume = new DirtVolume(transform, size, depth, cellSize, playPlane, material, castShadows, uvScale);
+                foreach (Hole hole in preDug)
+                    _volume.Carve(new Vector3(hole.center.x, hole.center.y, playPlane), hole.radius, 1f, out _);
+                _volume.BuildAll();
+                chunkCount = transform.childCount;
+                return;
+            }
+
             InitialiseDensity();
             CreateChunks();
             for (int chunk = 0; chunk < _chunks.Length; chunk++)
@@ -114,6 +144,7 @@ namespace Foundry.Digging
 
         private void OnDestroy()
         {
+            _volume?.Dispose();
             if (_chunks == null) return;
             foreach (Chunk chunk in _chunks)
                 if (chunk?.Mesh != null) Destroy(chunk.Mesh);
@@ -139,13 +170,19 @@ namespace Foundry.Digging
         // Digs a round hole: strength 1 fully clears its centre, less takes a partial bite (repeated bites finish it)
         public void Dig(Vector3 worldPoint, float radius, float strength)
         {
-            if (_density == null)
-                return;
-
-            if (!Carve(transform.InverseTransformPoint(worldPoint), radius, strength, out RectInt changedCorners))
-                return;
-
-            RebuildAround(changedCorners);
+            Vector3 local = transform.InverseTransformPoint(worldPoint);
+            if (_volume != null)
+            {
+                if (!_volume.Carve(local, radius, strength, out RectInt changed))
+                    return;
+                _volume.RebuildAround(changed);
+            }
+            else
+            {
+                if (_density == null || !Carve(local, radius, strength, out RectInt changedCorners))
+                    return;
+                RebuildAround(changedCorners);
+            }
 
             if (digEffect != null)
                 digEffect.SpawnObject(worldPoint, Quaternion.identity);
@@ -157,6 +194,8 @@ namespace Foundry.Digging
         // How solid the dirt is at a world point: 1 = solid, 0 = dug out (or outside the dirt). Solid above 0.5.
         public float DensityAt(Vector3 worldPoint)
         {
+            if (_volume != null)
+                return _volume.DensityAt(transform.InverseTransformPoint(worldPoint));
             if (_density == null)
                 return 0f;
 
