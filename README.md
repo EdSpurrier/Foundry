@@ -201,7 +201,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 - `DiggableTerrain` — dirt that can be dug through freely.
   - It's a density grid in local X/Y, meshed with marching squares and extruded along Z, with a matching `MeshCollider`.
   - The mesh is split into chunks, so each bite only rebuilds the chunks it touched.
-  - A strike bites a soft round hole (`Dig Radius`; `Hardness` is the number of strikes per full bite), so tunnels form wherever the player digs.
+  - A strike bites a soft round hole (`Dig Radius`; `Hardness` is the number of strikes per full bite), so tunnels form wherever the player digs. `Dig Into` pushes each bite further along the strike. `Dig Across` moves it across the strike: up or down for a forward peck, and the way the chicken faces for an up or down peck.
   - Also: `Pre Dug` holes, a pooled `Dig Effect`, the On Dig event, and `Dig()` / `DensityAt()` / `IsSolidAt()`.
   - **Mode:** **Through**, the original behaviour, where each bite cuts straight through the block. Or **Rounded**, a 3D grid where each bite scoops a sphere, so tunnels are rounded hollows inside the dirt.
   - For Rounded mode, give the dirt a material using the **`Foundry/Dirt (See-Through)`** shader, and put a **`SeeThroughWindow`** on the player. A soft window then opens in the dirt in front of the chicken, showing a slice through the dirt at its plane: solid where undug, tunnels where dug.

@@ -33,6 +33,7 @@ namespace Foundry.Digging
         private readonly Chunk[] _chunks;
         private readonly float _uvScale;
         private readonly Material _capMaterial;
+        private readonly Material _bandMaterial;
 
         // Reused while meshing
         private readonly List<Vector3> _vertices = new();
@@ -71,6 +72,20 @@ namespace Foundry.Digging
                 _capMaterial.SetFloat("_SeeThroughCap", 1f);
             }
 
+            // The window's soft edge: the front dirt drawn again, transparent, fading out across the edge over the cap
+            if (material != null && material.HasProperty("_SeeThroughBand"))
+            {
+                _bandMaterial = new Material(material) { name = material.name + " (Window Edge)" };
+                _bandMaterial.SetFloat("_SeeThroughBand", 1f);
+                _bandMaterial.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                _bandMaterial.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                _bandMaterial.SetFloat("_ZWrite", 0f);
+                _bandMaterial.renderQueue = (int)RenderQueue.Transparent;
+                _bandMaterial.SetShaderPassEnabled("ShadowCaster", false);
+                _bandMaterial.SetShaderPassEnabled("DepthOnly", false);
+                _bandMaterial.SetShaderPassEnabled("DepthNormals", false);
+            }
+
             _chunksX = Mathf.CeilToInt((_nx + 2) / (float)CHUNK);
             _chunksY = Mathf.CeilToInt((_ny + 2) / (float)CHUNK);
             _chunks = new Chunk[_chunksX * _chunksY];
@@ -88,6 +103,8 @@ namespace Foundry.Digging
 
             if (_capMaterial != null)
                 Object.Destroy(_capMaterial);
+            if (_bandMaterial != null)
+                Object.Destroy(_bandMaterial);
         }
 
         #region Density
@@ -169,7 +186,8 @@ namespace Foundry.Digging
                 chunk.Mesh.MarkDynamic();
                 chunkObject.AddComponent<MeshFilter>().sharedMesh = chunk.Mesh;
                 MeshRenderer renderer = chunkObject.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = material;
+                // A second material on a one-submesh renderer draws the same mesh again - the window's soft edge
+                renderer.sharedMaterials = _bandMaterial != null ? new[] { material, _bandMaterial } : new[] { material };
                 renderer.shadowCastingMode = castShadows;
                 chunk.Collider = chunkObject.AddComponent<MeshCollider>();
 

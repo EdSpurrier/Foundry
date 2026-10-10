@@ -80,6 +80,9 @@ namespace Foundry.Digging
         [Tooltip("How far into the surface a bite is centred, as a fraction of Dig Radius - more digs deeper per peck.")]
         [SerializeField, Range(0f, 1f)] private float digInto = 0.4f;
 
+        [Tooltip("Moves each bite across the strike, as a fraction of Dig Radius. For a forward peck: + is up, - is down (e.g. raise bites so tunnels come out tall enough for the chicken). For an up or down peck: + is the way the chicken faces.")]
+        [SerializeField, Range(-1f, 1f)] private float digAcross;
+
         [Title("Look")]
         [Tooltip("Material for the front and back faces.")]
         [SerializeField] private Material material;
@@ -158,7 +161,12 @@ namespace Foundry.Digging
                 return;
 
             Vector3 into = strike.Direction.sqrMagnitude > 0f ? strike.Direction.normalized : -strike.Normal;
-            Dig(strike.Point + into * (digRadius * digInto));
+
+            // Across a mostly-sideways strike is up; across a mostly-vertical one is the way the striker faces
+            Vector3 across = Mathf.Abs(into.y) < 0.7f ? Vector3.up
+                : strike.Facing.sqrMagnitude > 0f ? strike.Facing.normalized : Vector3.right;
+
+            Dig(strike.Point + into * (digRadius * digInto) + across * (digRadius * digAcross));
         }
 
         // Digs one bite (Dig Radius, at this dirt's Hardness) centred on a world point

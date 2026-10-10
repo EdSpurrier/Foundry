@@ -15,7 +15,7 @@ namespace Foundry.Digging
         [Tooltip("Radius (m) of the window around this object.")]
         [SerializeField, Min(0.1f)] private float radius = 1.4f;
 
-        [Tooltip("Width (m) of the soft edge of the window.")]
+        [Tooltip("Width (m) of the soft edge of the window: the dirt fades smoothly from solid to clear across it - bigger is a softer, more blurred edge.")]
         [SerializeField, Min(0f)] private float softness = 0.35f;
 
         [Tooltip("Centre of the window relative to this object - e.g. up to the middle of the chicken's body.")]

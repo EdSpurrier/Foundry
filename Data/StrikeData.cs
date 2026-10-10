@@ -20,6 +20,10 @@ namespace Foundry.Data
         public Vector3 Direction;
         public Vector3 Normal;
 
+        // Which way the striker faces (e.g. the chicken's left/right) - the "forward" for a strike that goes straight up
+        // or down, so receivers can tell sideways from the strike direction alone. Zero if unknown.
+        public Vector3 Facing;
+
         // Damage for anything with Life (0 = none)
         public int Damage;
 

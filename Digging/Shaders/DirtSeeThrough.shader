@@ -2,11 +2,13 @@
 // textured by world-space triplanar projection (no UVs needed), with steep surfaces tinted by Side Color.
 //
 // See-through window (driven by a SeeThroughWindow component, via the global _FoundrySeeThrough = centre xyz, radius w):
-//  - the dirt itself is cut away inside the window wherever it's in front of the window's plane (closer to the camera
-//    than the chicken), with a dithered soft edge
-//  - the cap (_SeeThroughCap = 1, set on DiggableTerrain's runtime copy of this material) is the slice through the
-//    dirt at the plane, and is drawn ONLY inside the window - exactly where the dirt was cut away
-// With no window (radius 0) the dirt is drawn whole and the cap is hidden.
+//  - the dirt itself (opaque) is cut away wherever the window reaches - including its soft edge - in front of the
+//    window's plane (closer to the camera than the chicken)
+//  - the cap (_SeeThroughCap = 1, a runtime copy of this material) is the slice through the dirt at the plane, drawn
+//    ONLY where the window reaches - so it fills the cut-away area
+//  - the band (_SeeThroughBand = 1, a transparent runtime copy drawn over the same mesh) puts the front dirt back across
+//    the soft edge, fading from solid at the rim to clear inside - a smooth blur over the cap rather than a hard line
+// With no window (radius 0) the dirt is drawn whole and the cap and band are hidden.
 Shader "Foundry/Dirt (See-Through)"
 {
     Properties
@@ -16,6 +18,10 @@ Shader "Foundry/Dirt (See-Through)"
         _SideColor ("Side Color (steep walls)", Color) = (0.42, 0.3, 0.19, 1)
         _TextureScale ("Texture Repeats Per Metre", Float) = 0.5
         [HideInInspector] _SeeThroughCap ("Cap (set by script)", Float) = 0
+        [HideInInspector] _SeeThroughBand ("Band (set by script)", Float) = 0
+        [HideInInspector] _SrcBlend ("Src Blend", Float) = 1
+        [HideInInspector] _DstBlend ("Dst Blend", Float) = 0
+        [HideInInspector] _ZWrite ("ZWrite", Float) = 1
     }
 
     SubShader
@@ -31,6 +37,10 @@ Shader "Foundry/Dirt (See-Through)"
             half4 _SideColor;
             float _TextureScale;
             float _SeeThroughCap;
+            float _SeeThroughBand;
+            float _SrcBlend;
+            float _DstBlend;
+            float _ZWrite;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap);
@@ -39,12 +49,6 @@ Shader "Foundry/Dirt (See-Through)"
         // Set globally by SeeThroughWindow
         float4 _FoundrySeeThrough;
         float _FoundrySeeThroughSoftness;
-
-        // A stable per-pixel noise in 0..1 for the dithered window edge
-        float SeeThroughNoise(float2 pixel)
-        {
-            return frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
-        }
 
         // How much of this pixel is "inside the window": 1 well inside, 0 outside, a ramp across the soft edge
         float SeeThroughInside(float3 positionWS)
@@ -58,21 +62,39 @@ Shader "Foundry/Dirt (See-Through)"
             return 1.0 - smoothstep(radius - softness, radius, distanceXY);
         }
 
-        // Discards the pixel if it's cut away: the dirt in front of the plane inside the window, or the cap outside it.
-        // The two use complementary dither, so the soft edges blend seamlessly.
-        void SeeThroughClip(float3 positionWS, float2 pixel)
+        // Discards what's cut away, and returns the opacity to draw the rest at:
+        //  - cap: only where the window reaches (opaque)
+        //  - dirt in front of the plane: cut away wherever the window reaches; the band copy draws it back across the soft
+        //    edge, fading out toward the inside
+        //  - dirt behind the plane: drawn as normal (the band copy skips it)
+        float SeeThroughAlpha(float3 positionWS)
         {
             float inside = SeeThroughInside(positionWS);
-            float noise = SeeThroughNoise(pixel);
 
             if (_SeeThroughCap > 0.5)
             {
-                clip(inside - noise - 0.0001);
+                clip(inside - 0.0001);
+                return 1.0;
             }
-            else if (positionWS.z < _FoundrySeeThrough.z - 0.01)
+
+            bool inFront = positionWS.z < _FoundrySeeThrough.z - 0.01;
+            if (_SeeThroughBand > 0.5)
             {
-                clip(noise - inside);
+                clip(inFront ? 1.0 : -1.0);
+                clip(inside - 0.0001);
+                clip(0.9999 - inside);
+                return 1.0 - inside;
             }
+
+            if (inFront)
+                clip(0.0001 - inside);
+            return 1.0;
+        }
+
+        // Depth passes: the same cut as the opaque dirt and the cap
+        void SeeThroughClip(float3 positionWS, float2 pixel)
+        {
+            SeeThroughAlpha(positionWS);
         }
 
         // World-space triplanar texture, tinted toward Side Color where the surface is steep (facing sideways or up/down
@@ -100,7 +122,8 @@ Shader "Foundry/Dirt (See-Through)"
             Tags { "LightMode" = "UniversalForward" }
 
             Cull Back
-            ZWrite On
+            Blend [_SrcBlend] [_DstBlend]
+            ZWrite [_ZWrite]
 
             HLSLPROGRAM
             #pragma vertex Vert
@@ -140,7 +163,7 @@ Shader "Foundry/Dirt (See-Through)"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                SeeThroughClip(input.positionWS, input.positionCS.xy);
+                float alpha = SeeThroughAlpha(input.positionWS);
 
                 float3 normalWS = normalize(input.normalWS);
                 half3 albedo = DirtAlbedo(input.positionWS, normalWS);
@@ -157,7 +180,7 @@ Shader "Foundry/Dirt (See-Through)"
 
                 half3 color = albedo * lighting;
                 color = MixFog(color, input.fogFactor);
-                return half4(color, 1.0);
+                return half4(color, alpha);
             }
             ENDHLSL
         }
