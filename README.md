@@ -189,6 +189,18 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 
 `ImpactTrigger3D` (0.8.0) now tells **every** enabled `IImpactReceiver` on the nearest object with any, starting from the collider it hit and working up its parents (it used to tell only the first one, on the hit object itself).
 
+### Fracture (0.9.0)
+- `Fracturable` — breaks its object's mesh into chunks, each with a convex `MeshCollider` and a Rigidbody, which burst apart from the break point.
+  - **Pre-Baked:** **Bake Fracture** cuts the pieces in the editor, saving the meshes to `Assets/Fractures` and the pieces as an inactive child. Breaking then costs nothing.
+  - **Runtime:** it cuts at the moment of breaking, with `Focus On Hit` clustering smaller pieces around the hit.
+  - Settings: `Piece Count`, `Random Seed`, `Inside Material` for the cut faces, `Piece Layer` (e.g. Debris), `Total Mass`, `Lock To Plane`, `Burst Speed / Radius / Lift`.
+  - **Debris:** Shrink Away (after `Lifetime`), Stay Forever, or Settle Then Freeze.
+  - It breaks via `Break()` / `Break(point)`, the **Fracture** action, or by itself when a `Life` on the same object dies (`Break When Life Dies`, from the last hit point).
+  - Works on solid, roughly convex shapes.
+- `MeshFracturer` — the slicing itself: Voronoi cells, made by clipping the mesh against the half-way planes between seed points and capping each cut.
+- `FractureAction` — breaks Fracturables from any event.
+- `Life` (0.9.0): **Sense Own Collisions** lets something hitting it directly (e.g. a box dropped on a platform) damage it, with no `ImpactTrigger3D` needed on the thing that hits it. `LastDamage` and a C# `Died` event are also added.
+
 ### Ropes (0.8.0)
 - `Rope` — a physics rope, cable or cord: a chain of jointed segments (`ConfigurableJoint`s, planar by default) drawn as a line.
   - It hangs from its own object to one of: an `End Body` (which swings, and falls when the rope is cut), a fixed `End Anchor` (a cable across a gap), or nothing (a loose end).
@@ -254,6 +266,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.9.0` | `0.3.0` |
 | `0.8.0` | `0.3.0` |
 | `0.7.0` | `0.3.0` |
 | `0.6.0` | `0.3.0` |
