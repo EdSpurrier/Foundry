@@ -74,6 +74,10 @@ namespace Foundry.Damage
         [Tooltip("Extra damage per m/s faster than Min Impact Speed (0 = every qualifying hit does Impact Damage). E.g. 0.5 = a hit 4 m/s over does 2 extra.")]
         [Min(0f)] public float damagePerExtraSpeed;
 
+        [ShowIf(nameof(damagedByImpacts))]
+        [Tooltip("Also sense things hitting it directly (e.g. a box dropped on a platform) - no ImpactTrigger3D needed on what hits it. Uses the same Impact Layers and Min Impact Speed; set Impact Layers so the chicken landing on it doesn't count. Needs this component on the object with the collider.")]
+        public bool senseOwnCollisions;
+
         private GameObject _lastImpactSource;
         private float _lastImpactTime = -1f;
 
@@ -105,33 +109,56 @@ namespace Foundry.Damage
         // Something thrown or shot into it (reported by the thrower's ImpactTrigger3D, e.g. an egg's)
         public void OnImpact(ImpactData impact)
         {
-            if (!damagedByImpacts || impact == null || impact.source == null)
-                return;
-            if (impactLayers.value != 0 && (impactLayers.value & (1 << impact.source.layer)) == 0)
-                return;
-            if (impact.force < minImpactSpeed)
+            if (impact == null || impact.source == null)
                 return;
 
-            // One hit can report more than one contact as it bounces - count it once
-            if (impact.source == _lastImpactSource && Time.time - _lastImpactTime < 0.1f)
+            // Reported by the thrower: its collision's relative velocity is ours minus its own
+            Vector3 travel = impact.collision3D != null ? -impact.collision3D.relativeVelocity.normalized : -impact.normal;
+            TakeImpact(impact.source, impact.source.layer, impact.force, impact.point, impact.normal, travel);
+        }
+
+        // Sense Own Collisions: something hitting this object's collider directly
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (!damagedByImpacts || !senseOwnCollisions || collision.gameObject == null)
                 return;
-            _lastImpactSource = impact.source;
+
+            GameObject source = collision.rigidbody != null ? collision.rigidbody.gameObject : collision.gameObject;
+            ContactPoint contact = collision.contactCount > 0 ? collision.GetContact(0) : default;
+
+            // Our side of the collision: its relative velocity is the other body's minus ours - the way it was moving
+            int layer = (impactLayers.value & (1 << collision.collider.gameObject.layer)) != 0 ? collision.collider.gameObject.layer : source.layer;
+            TakeImpact(source, layer, collision.relativeVelocity.magnitude, contact.point, contact.normal, collision.relativeVelocity.normalized);
+        }
+
+        private void TakeImpact(GameObject source, int layer, float speed, Vector3 point, Vector3 normal, Vector3 travel)
+        {
+            if (!damagedByImpacts)
+                return;
+            if (impactLayers.value != 0 && (impactLayers.value & (1 << layer)) == 0)
+                return;
+            if (speed < minImpactSpeed)
+                return;
+
+            // One hit can be reported more than once (bounces, and both an ImpactTrigger3D and our own sensing) - count it once
+            if (source == _lastImpactSource && Time.time - _lastImpactTime < 0.1f)
+                return;
+            _lastImpactSource = source;
             _lastImpactTime = Time.time;
 
-            int amount = impactDamage + Mathf.FloorToInt((impact.force - minImpactSpeed) * damagePerExtraSpeed);
-            Vector3 travel = impact.collision3D != null ? -impact.collision3D.relativeVelocity.normalized : -impact.normal;
+            int amount = impactDamage + Mathf.FloorToInt((speed - minImpactSpeed) * damagePerExtraSpeed);
 
             ApplyDamage(new DamageData
             {
                 amount = amount,
                 damageType = DamageType.Impact,
-                source = impact.source,
-                instigator = impact.source,
+                source = source,
+                instigator = source,
                 target = gameObject,
-                point = impact.point,
+                point = point,
                 direction = travel,
-                normal = impact.normal,
-                force = impact.force
+                normal = normal,
+                force = speed
             });
         }
 
@@ -144,11 +171,15 @@ namespace Foundry.Damage
             currentLifeStage = null;
         }
 
+        // The most recent damage taken (where, which way, from what) - e.g. for a Fracturable to break from the hit point
+        public DamageData LastDamage { get; private set; }
+
         public void ApplyDamage(DamageData damageData)
         {
             if (damageData == null)
                 return;
 
+            LastDamage = damageData;
             Damage(damageData.amount);
         }
 
@@ -236,7 +267,11 @@ namespace Foundry.Damage
 
             status = LifeStatus.Dead;
             deathEvent.Activate();
+            Died?.Invoke(this);
         }
+
+        // Fires once when it dies, for code listeners (e.g. a Fracturable on the same object breaking apart)
+        public event System.Action<Life> Died;
 
         public void ResetLife()
         {

@@ -740,8 +740,9 @@ namespace Foundry.Triggers
 #if UNITY_EDITOR
         private bool _editorFitScheduled;
 
-        private void OnValidate()
+        protected override void OnValidate()
         {
+            base.OnValidate();
             crossSection = Vector2.Max(crossSection, new Vector2(0.05f, 0.05f));
 
             if (!fitColliderToWind)
