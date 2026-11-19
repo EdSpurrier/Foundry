@@ -15,7 +15,7 @@ namespace Foundry.Actions
         {
             if (attachmentGroup == null)
             {
-                Debug.LogWarning($"Action Detach >> No AttachmentGroup assigned - {actionName}");
+                LogWarning($"Action Detach >> No AttachmentGroup assigned - {actionName}");
                 return;
             }
 

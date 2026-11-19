@@ -33,7 +33,7 @@ namespace Foundry.Actions
         {
             if (interactables == null || interactables.Count == 0)
             {
-                Debug.LogWarning($"[InteractableAction] No Interactables set - {actionName}");
+                LogWarning($"[InteractableAction] No Interactables set - {actionName}");
                 return;
             }
 

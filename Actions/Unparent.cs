@@ -22,7 +22,7 @@ namespace Foundry.Actions
         {
             if (targets == null || targets.Count == 0)
             {
-                Debug.LogWarning("Action: Unparent >> No targets assigned.");
+                LogWarning("Action: Unparent >> No targets assigned.");
                 return;
             }
             

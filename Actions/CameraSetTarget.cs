@@ -22,7 +22,7 @@ namespace Foundry.Actions
 
             if (target == null)
             {
-                Debug.LogWarning($"CameraSetTarget >> No target assigned on action: {actionName}");
+                LogWarning($"CameraSetTarget >> No target assigned on action: {actionName}");
                 return;
             }
 

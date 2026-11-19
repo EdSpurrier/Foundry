@@ -73,7 +73,7 @@ namespace Foundry.Actions
 
         private void Warn(string message)
         {
-            Debug.LogWarning($"[EventManagerAction] {message} - {actionName}");
+            LogWarning($"[EventManagerAction] {message} - {actionName}");
         }
     }
 }

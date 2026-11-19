@@ -23,7 +23,7 @@ namespace Foundry.Actions
         {
             if (gameObjects == null || gameObjects.Count == 0)
             {
-                Debug.LogWarning($"[ActionActivate] No GameObjects set - {actionName}");
+                LogWarning($"[ActionActivate] No GameObjects set - {actionName}");
                 return;
             }
 

@@ -351,6 +351,7 @@ MonoBehaviour:
     active: 0
     eventManager: {fileID: 0}
     processTime: 0
+    owner: {fileID: 5293829054798098952}
   activated: 0
   references:
     version: 2
@@ -1218,10 +1219,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e402fadd1ea756341bd7f601005c8b1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Foundry::Foundry.Triggers.ImpactTrigger
-  active: 1
-  detectionMask:
-    serializedVersion: 2
-    m_Bits: 951
   onImpact:
     eventName: Event Name
     waitTime: 0
@@ -1238,6 +1235,11 @@ MonoBehaviour:
     active: 0
     eventManager: {fileID: 0}
     processTime: 0
+    owner: {fileID: 6001046273018866980}
+  active: 1
+  detectionMask:
+    serializedVersion: 2
+    m_Bits: 951
   lastImpactObject: {fileID: 0}
   lastImpactStrength: 0
   references:
