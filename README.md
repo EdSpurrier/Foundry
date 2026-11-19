@@ -266,6 +266,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.10.0` | `0.4.0` (minimum — action warnings use `FrameAction.LogWarning`) |
 | `0.9.0` | `0.3.0` |
 | `0.8.0` | `0.3.0` |
 | `0.7.0` | `0.3.0` |
