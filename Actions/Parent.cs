@@ -26,13 +26,13 @@ namespace Foundry.Actions
         {
             if (targets == null || targets.Count == 0)
             {
-                Debug.LogWarning("Action: Parent >> No targets assigned.");
+                LogWarning("Action: Parent >> No targets assigned.");
                 return;
             }
 
             if (newParent == null)
             {
-                Debug.LogWarning("Action: Parent >> No parent assigned.");
+                LogWarning("Action: Parent >> No parent assigned.");
                 return;
             }
 

@@ -46,7 +46,7 @@ namespace Foundry.Actions
         {
             if (soundBank == null)
             {
-                Debug.LogWarning($"Action_Sound >> No SoundBank assigned on action: {actionName}");
+                LogWarning($"Action_Sound >> No SoundBank assigned on action: {actionName}");
                 return;
             }
 

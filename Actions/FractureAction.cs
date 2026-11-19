@@ -24,7 +24,7 @@ namespace Foundry.Actions
         {
             if (fracturables == null || fracturables.Count == 0)
             {
-                Debug.LogWarning($"[FractureAction] No Fracturables set - {actionName}");
+                LogWarning($"[FractureAction] No Fracturables set - {actionName}");
                 return;
             }
 

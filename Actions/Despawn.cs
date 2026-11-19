@@ -25,7 +25,7 @@ namespace Foundry.Actions
         {
             if (gameObjects == null || gameObjects.Count == 0)
             {
-                Debug.LogWarning($"[ActionDespawn] No GameObjects set - {actionName}");
+                LogWarning($"[ActionDespawn] No GameObjects set - {actionName}");
                 return;
             }
 

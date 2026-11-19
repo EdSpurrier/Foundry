@@ -23,7 +23,7 @@ namespace Foundry.Actions
         {
             if (transformerBehaviour == null)
             {
-                Debug.LogWarning("TransformerAction >> No transformerBehaviour assigned.");
+                LogWarning("TransformerAction >> No transformerBehaviour assigned.");
                 return;
             }
 
@@ -31,7 +31,7 @@ namespace Foundry.Actions
 
             if (transformerAction == null)
             {
-                Debug.LogWarning($"{transformerBehaviour.name} does not implement ITransformerAction.");
+                LogWarning($"{transformerBehaviour.name} does not implement ITransformerAction.");
                 return;
             }
 

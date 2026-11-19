@@ -45,13 +45,13 @@ namespace Foundry.Actions
         {
             if (animator == null)
             {
-                Debug.LogWarning($"Action: Animation >> No Animator assigned on action: {actionName}");
+                LogWarning($"Action: Animation >> No Animator assigned on action: {actionName}");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(parameterName))
             {
-                Debug.LogWarning($"Action: Animation >> No parameter name assigned on action: {actionName}");
+                LogWarning($"Action: Animation >> No parameter name assigned on action: {actionName}");
                 return;
             }
 

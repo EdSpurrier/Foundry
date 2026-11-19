@@ -51,7 +51,7 @@ namespace Foundry.Actions
         {
             if (prefab == null)
             {
-                Debug.LogWarning("Add To Pool failed: prefab is null");
+                LogWarning("Add To Pool failed: prefab is null");
                 return;
             }
             EditorInteractions.AddToPool(prefab);
@@ -61,7 +61,7 @@ namespace Foundry.Actions
         {
             if (prefab == null)
             {
-                Debug.LogWarning("Spawn Action failed: prefab is null");
+                LogWarning("Spawn Action failed: prefab is null");
                 return;
             }
 
@@ -72,7 +72,7 @@ namespace Foundry.Actions
             {
                 if (spawnPointReference == null)
                 {
-                    Debug.LogWarning("Spawn Action failed: spawnPointReference is null");
+                    LogWarning("Spawn Action failed: spawnPointReference is null");
                     return;
                 }
 

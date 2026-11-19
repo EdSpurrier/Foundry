@@ -45,7 +45,7 @@ namespace Foundry.Actions
         {
             if (gameObjects == null || gameObjects.Count == 0)
             {
-                Debug.LogWarning($"[ActionDestroy] No GameObjects set - {actionName}");
+                LogWarning($"[ActionDestroy] No GameObjects set - {actionName}");
                 return;
             }
 
@@ -60,7 +60,7 @@ namespace Foundry.Actions
         {
             if (components == null || components.Count == 0)
             {
-                Debug.LogWarning($"[ActionDestroy] No Components set - {actionName}");
+                LogWarning($"[ActionDestroy] No Components set - {actionName}");
                 return;
             }
 

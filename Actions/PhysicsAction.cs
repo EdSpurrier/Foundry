@@ -21,7 +21,7 @@ namespace Foundry.Actions
         {
             if (physicsBehaviour == null)
             {
-                Debug.LogWarning("PhysicsAction >> No physicsBehaviour assigned.");
+                LogWarning("PhysicsAction >> No physicsBehaviour assigned.");
                 return;
             }
 
@@ -29,7 +29,7 @@ namespace Foundry.Actions
 
             if (physicsAction == null)
             {
-                Debug.LogWarning($"{physicsBehaviour.name} does not implement IPhysicsAction.");
+                LogWarning($"{physicsBehaviour.name} does not implement IPhysicsAction.");
                 return;
             }
 

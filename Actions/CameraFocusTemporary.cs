@@ -45,7 +45,7 @@ namespace Foundry.Actions
 
             if (target == null)
             {
-                Debug.LogWarning($"CameraFocusTemporary >> No target assigned on action: {actionName}");
+                LogWarning($"CameraFocusTemporary >> No target assigned on action: {actionName}");
                 return;
             }
 

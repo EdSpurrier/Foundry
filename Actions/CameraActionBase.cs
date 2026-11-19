@@ -26,7 +26,7 @@ namespace Foundry.Actions
 
             if (resolvedCamera == null)
             {
-                Debug.LogWarning($"[{ActionType}] >> No CameraCore assigned or found via FoundryCore on action: {actionName}");
+                LogWarning($"[{ActionType}] >> No CameraCore assigned or found via FoundryCore on action: {actionName}");
                 return false;
             }
 
