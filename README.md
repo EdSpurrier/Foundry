@@ -244,6 +244,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 ### Camera System
 - `CameraCore` — stable API (`SetTarget`, `SetOffset`, `SetZoom`, `SetLookAhead`, `ResetCamera`, `FocusTemporary`) that the Camera Actions above call into.
 - `CameraRig2D` — the actual per-frame follow/zoom/look-ahead behaviour.
+- `CameraFocusZone` — a trigger volume (extends `VolumeTrigger3D`) that frames the camera on an area while the player is in it: **Hold Still** on a View Centre, or **Follow** pulled back (Distance) and shifted (Follow Shift). Zones can touch or overlap - the last one entered wins, and leaving it falls back to one the player is still in, or to the camera defaults. Select one in the editor to see its camera frame in the Scene view (drag to move/resize) and a live preview of the game camera, with a button to show it in the Game view. (0.13.0)
 
 ### Attachments
 - `AttachmentBinding` / `AttachmentGroup` — socket-style parenting with position/rotation offsets and an editor-time position preview, driven by the `Attach`/`Detach` Actions.
