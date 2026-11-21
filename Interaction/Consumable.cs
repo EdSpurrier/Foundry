@@ -10,6 +10,7 @@ namespace Foundry.Interaction
     // Something that can be eaten - fruit, seeds, a worm. Striking it (e.g. the chicken pecking it) takes a bite; after
     // Bites To Eat it's eaten: On Consumed fires (wire it to whatever eating it does, e.g. grant a power-up) and it's
     // removed (despawned back to its pool if it came from one). Consume() eats it outright from anything else.
+    // With Remove When Eaten off it stays; Eat Again After makes it edible again (a permanent fruit you keep biting).
     public class Consumable : MonoBehaviour, IStrikeReceiver
     {
         [Title("Consumable")]
@@ -26,6 +27,11 @@ namespace Foundry.Interaction
 
         [Tooltip("Remove it once eaten (despawned to its pool if it came from one, otherwise destroyed). Off = it stays (e.g. an endless feeder) - use Reset Consumable to eat it again.")]
         [SerializeField] private bool removeWhenEaten = true;
+
+        [HideIf(nameof(removeWhenEaten))]
+        [Tooltip("When it stays: it can be eaten again this long (s) after each time it's eaten - e.g. a fruit the chicken keeps biting for its power-up (0 = straight away). Negative = never: only Reset Consumable makes it edible again.")]
+        [SuffixLabel("s", Overlay = true)]
+        [SerializeField] private float eatAgainAfter = -1f;
 
         [Title("Events")]
         [Tooltip("Each bite before the last.")]
@@ -78,6 +84,17 @@ namespace Foundry.Interaction
 
             if (removeWhenEaten)
                 gameObject.Despawn();
+            else if (eatAgainAfter == 0f)
+                ResetConsumable();
+            else if (eatAgainAfter > 0f && isActiveAndEnabled)
+                StartCoroutine(EatAgainLater());
+        }
+
+        private System.Collections.IEnumerator EatAgainLater()
+        {
+            yield return new WaitForSeconds(eatAgainAfter);
+            if (consumed)
+                ResetConsumable();
         }
 
         // Uneaten again, e.g. when a pooled fruit is respawned or a feeder refills

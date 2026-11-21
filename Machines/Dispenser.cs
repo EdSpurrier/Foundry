@@ -56,6 +56,15 @@ namespace Foundry.Machines
         [SuffixLabel("s", Overlay = true)]
         [SerializeField, Min(0f)] private float cooldown = 1.5f;
 
+        [Tooltip("Dispense by itself every this many seconds while enabled (a chute dropping balls). 0 = only when told to.")]
+        [SuffixLabel("s", Overlay = true)]
+        [SerializeField, Min(0f)] private float autoEvery;
+
+        [ShowIf("@autoEvery > 0")]
+        [Tooltip("Wait before the first automatic one.")]
+        [SuffixLabel("s", Overlay = true)]
+        [SerializeField, Min(0f)] private float autoStartDelay = 1f;
+
         [Title("Events")]
         [SerializeField, HideLabel] private FrameCoreEvent onDispense = new() { eventName = "Dispenser - Dispense" };
         [SerializeField, HideLabel] private FrameCoreEvent onDoorShut = new() { eventName = "Dispenser - Door Shut" };
@@ -80,6 +89,22 @@ namespace Foundry.Machines
                 template.SetActive(false);
             if (door != null)
                 _doorClosed = door.localRotation;
+        }
+
+        private void OnEnable()
+        {
+            if (Application.isPlaying && autoEvery > 0f)
+                StartCoroutine(AutoRoutine());
+        }
+
+        private IEnumerator AutoRoutine()
+        {
+            yield return new WaitForSeconds(autoStartDelay);
+            while (true)
+            {
+                Dispense();
+                yield return new WaitForSeconds(autoEvery);
+            }
         }
 
         [Button("Dispense")]

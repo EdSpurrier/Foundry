@@ -150,6 +150,8 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 - `Transformer` — abstract base: runs on a chosen Unity update loop (`Update`/`FixedUpdate`/`LateUpdate`) while active.
 - `Follower` — smoothed or snapped position/rotation following, with per-axis locking.
 - `ScaleOverTime` — animates scale over time; implements `ITransformerAction` directly.
+- `PunchScale` (0.13.0) — a quick squash-and-wobble on an object's scale (a bitten fruit, a pressed button). Play it with the Transformer action.
+- `MoveBetween` (0.13.0) — slides an object between closed (where it starts) and `Open Offset`: a door, gate or lift. Transformer action on = open, off = close; On Opened / On Closed events.
 
 ### Triggers
 - `VolumeTriggerBase` (abstract) / `VolumeTrigger2D` / `VolumeTrigger3D` — enter/exit detection with layer filtering and optional threshold events (fire once N tracked objects are in/out).
@@ -166,6 +168,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 ### Particles
 - `ParticlePhysics` — add to a particle system to let the environment move its particles. Each frame it runs its particles through every active `IParticleAffector` they're inside (one particle read/write per frame however many affectors). `Sensitivity` (1 = normal, higher = lighter, 0 = unaffected) scales every affector's effect.
 - `IParticleAffector` / `ParticleAffectors` — the interface anything that moves particles implements (`Affect(position, velocity, sensitivity, dt)` → new velocity), and the registry affectors join while enabled. `WindTrigger3D` is one; a water current, vortex or explosion could be others without touching `ParticlePhysics`.
+- `FxBuilder` (0.13.0) — helpers for components that build their own particles in code (Fire, Rain): a ready-to-set-up child particle system, gradients, curves, emission rate.
 
 ### Damage
 - `DamageData` / `DamageType` — a damage payload: amount, type (`Generic`, `Bullet`, `Explosion`, `Impact`, `Fire`, `Strike`), source/instigator/target, hit point/direction/normal, and force.
@@ -185,7 +188,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
   - It has a cooldown. It can be used by a strike (a peck), by something thrown into it (an egg, via its `ImpactTrigger3D`; `Impact Layers` and `Min Impact Speed`), or by `Interact()` / `InteractFrom(direction)` from anything else.
   - **Use On Trigger:** something entering a trigger collider on the same object uses it: the chicken stepping onto it, a pushed rock or a rolling egg (`Trigger Layers`). For a Toggle, **On While Occupied** makes it a pressure plate: on while anything's inside, and off once it's been empty for `Release Delay`, including when something inside is despawned. The zone is sensed every physics step. Trigger colliders count only if their layer is in Trigger Layers, so the chicken's **Player Feet** sensor presses a thin plate.
   - **Hit Direction** (optional) sets what a hit from each side does (from left / right / above / below): the mode's action, Turn On, Turn Off (Toggle only) or Ignore. It can apply to strikes, impacts or both, using the object's own sides or the world's. E.g. an egg from the left switches it on and one from the right switches it off.
-- `Consumable` — something that can be eaten. Each strike takes a bite. After `Bites To Eat` it's consumed: On Consumed fires (e.g. to grant a power-up), and it's despawned, or destroyed if it wasn't pooled.
+- `Consumable` — something that can be eaten. Each strike takes a bite. After `Bites To Eat` it's consumed: On Consumed fires (e.g. to grant a power-up), and it's despawned, or destroyed if it wasn't pooled. With `Remove When Eaten` off it stays, and `Eat Again After` (0.13.0) makes it edible again after that many seconds - a permanent fruit.
 
 `ImpactTrigger3D` (0.8.0) now tells **every** enabled `IImpactReceiver` on the nearest object with any, starting from the collider it hit and working up its parents (it used to tell only the first one, on the hit object itself).
 
@@ -202,12 +205,22 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 - `Life` (0.9.0): **Sense Own Collisions** lets something hitting it directly (e.g. a box dropped on a platform) damage it, with no `ImpactTrigger3D` needed on the thing that hits it. `LastDamage` and a C# `Died` event are also added.
 
 ### Physics (0.11.0)
+- `KnockLoose` (0.13.0) — holds something in place until an impact (an egg) or a strike (a peck) knocks it loose: it drops with `Knock Velocity` and a spin, passes through `Pass Through Layers` for a moment so it falls clear of its neighbours, takes `Takes With` down too, and shrinks away after `Remove After`. Event On Knocked. Loose roof tiles, wobbly bricks.
 - `StayAwake` — keeps a Rigidbody from sleeping, so it reacts the moment what it rests on goes away (a support switched off, broken or despawned). Unity doesn't wake a sleeping body when a collider under it is disabled or destroyed, so without it the body hangs in mid-air. Optional **Sleep Once Settled** lets it sleep again after it has moved and stayed at rest for `Settle Time`; off by default, the safe choice when it may land on debris that later disappears.
 
 ### Machines (0.12.0)
-- `Dispenser` — hands out a copy of a `Template` (a switched-off scene object) each `Dispense()`: a hatch that drops a crate, a chute, a pipe. Optional `Door` (a hinge transform) swings open first and shut after; copies start with `Launch Velocity`; `Cooldown`; `Max Alive` removes the oldest. Events On Dispense / On Door Shut. Use it from any event with the `DispenseAction`.
+- `Dispenser` — hands out a copy of a `Template` (a switched-off scene object) each `Dispense()`: a hatch that drops a crate, a chute, a pipe. Optional `Door` (a hinge transform) swings open first and shut after; copies start with `Launch Velocity`; `Cooldown`; `Max Alive` removes the oldest; `Auto Every` (0.13.0) dispenses by itself on a timer while it's switched on. Events On Dispense / On Door Shut. Use it from any event with the `DispenseAction`.
 - `ClawCrane` — a claw on a cable hanging from a trolley on a rail. It waits for a loose Rigidbody (`Load Layers`) to rest inside the `Pickup Area`, lowers onto it, grabs it, lifts it (`Lift Height`), carries it to the `Drop Point` and sets it down on whatever is there, so loads pile up (`Drop Spread`), then goes `Home`. The rig (trolley, head, cable, fingers) is plain transforms you build in any look, with no colliders; speeds, grip time and pauses are on the component. Events On Grab / On Release / On Home.
 - `DispenseAction` — calls `Dispense()` on a list of Dispensers.
+
+### Hazards (0.13.0)
+- `Fire` — a patch of fire: flames, embers, smoke, steam and a flickering light, all built in code from an additive and an alpha-blended particle material. While it's lit, anything on `Touch Layers` touching it fires On Touch (again every `Touch Repeat` while it stays in) - hook the reaction there. Rain puts it out: the more of it is rained on, the faster it gets wet (`Douse Time` = seconds of rain over all of it), steaming as it goes, and it dries out again (`Recover Rate`) if the rain stops first. `Start Lit`; Ignite / Extinguish / Douse. Events On Ignite / On Extinguished / On Touch.
+- `FireAction` — Ignite / Extinguish / Douse a list of Fires.
+
+### Weather (0.13.0)
+- `Rain` — rain over a box (`Area`): streaks that stop on anything in `Blocking Layers` (a roof keeps the room under it dry - knock a hole in it and the rain comes through), with splashes, slanted by `Drift`, fading in and out. `IsRainingOn(point)` / `Rain.AnyRainingOn(point)` tell other things whether a spot is getting wet. Events On Start / On Stop.
+- `Lightning` — `Strike()` draws a jagged bolt from the object down to `Target` and flashes the scene; `Flash()` just flashes (distant lightning); ambient flashes every few seconds once started. Events On Strike / On Flash.
+- `RainAction`, `LightningAction` — start / stop / toggle rain; strike, flash, start / stop the ambient flashes.
 
 ### Ropes (0.8.0)
 - `Rope` — a physics rope, cable or cord: a chain of jointed segments (`ConfigurableJoint`s, planar by default) drawn as a line.
@@ -231,6 +244,7 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 ### Camera System
 - `CameraCore` — stable API (`SetTarget`, `SetOffset`, `SetZoom`, `SetLookAhead`, `ResetCamera`, `FocusTemporary`) that the Camera Actions above call into.
 - `CameraRig2D` — the actual per-frame follow/zoom/look-ahead behaviour.
+- `CameraFocusZone` — a trigger volume (extends `VolumeTrigger3D`) that frames the camera on an area while the player is in it: **Hold Still** on a View Centre, or **Follow** pulled back (Distance) and shifted (Follow Shift). Zones can touch or overlap - the last one entered wins, and leaving it falls back to one the player is still in, or to the camera defaults. Select one in the editor to see its camera frame in the Scene view (drag to move/resize) and a live preview of the game camera, with a button to show it in the Game view. (0.13.0)
 
 ### Attachments
 - `AttachmentBinding` / `AttachmentGroup` — socket-style parenting with position/rotation offsets and an editor-time position preview, driven by the `Attach`/`Detach` Actions.
@@ -274,6 +288,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.13.0` | `0.5.0` (`0.4.0` also works - nothing new is needed from FrameCoreU; 0.5.0's timed-event fix is recommended) |
 | `0.12.0` | `0.4.0` (0.5.0's timed-event fix recommended when delayed events chain, e.g. a rope cut snapping other ropes) |
 | `0.11.0` | `0.4.0` |
 | `0.10.0` | `0.4.0` (minimum — action warnings use `FrameAction.LogWarning`) |
