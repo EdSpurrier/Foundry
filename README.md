@@ -204,6 +204,11 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 ### Physics (0.11.0)
 - `StayAwake` — keeps a Rigidbody from sleeping, so it reacts the moment what it rests on goes away (a support switched off, broken or despawned). Unity doesn't wake a sleeping body when a collider under it is disabled or destroyed, so without it the body hangs in mid-air. Optional **Sleep Once Settled** lets it sleep again after it has moved and stayed at rest for `Settle Time`; off by default, the safe choice when it may land on debris that later disappears.
 
+### Machines (0.12.0)
+- `Dispenser` — hands out a copy of a `Template` (a switched-off scene object) each `Dispense()`: a hatch that drops a crate, a chute, a pipe. Optional `Door` (a hinge transform) swings open first and shut after; copies start with `Launch Velocity`; `Cooldown`; `Max Alive` removes the oldest. Events On Dispense / On Door Shut. Use it from any event with the `DispenseAction`.
+- `ClawCrane` — a claw on a cable hanging from a trolley on a rail. It waits for a loose Rigidbody (`Load Layers`) to rest inside the `Pickup Area`, lowers onto it, grabs it, lifts it (`Lift Height`), carries it to the `Drop Point` and sets it down on whatever is there, so loads pile up (`Drop Spread`), then goes `Home`. The rig (trolley, head, cable, fingers) is plain transforms you build in any look, with no colliders; speeds, grip time and pauses are on the component. Events On Grab / On Release / On Home.
+- `DispenseAction` — calls `Dispense()` on a list of Dispensers.
+
 ### Ropes (0.8.0)
 - `Rope` — a physics rope, cable or cord: a chain of jointed segments (`ConfigurableJoint`s, planar by default) drawn as a line.
   - It hangs from its own object to one of: an `End Body` (which swings, and falls when the rope is cut), a fixed `End Anchor` (a cable across a gap), or nothing (a loose end).
@@ -269,6 +274,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.12.0` | `0.4.0` (0.5.0's timed-event fix recommended when delayed events chain, e.g. a rope cut snapping other ropes) |
 | `0.11.0` | `0.4.0` |
 | `0.10.0` | `0.4.0` (minimum — action warnings use `FrameAction.LogWarning`) |
 | `0.9.0` | `0.3.0` |

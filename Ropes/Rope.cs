@@ -395,6 +395,12 @@ namespace Foundry.Ropes
                 Destroy(_upJoints[segmentIndex]);
 
             _linked[segmentIndex] = false;
+
+            // The End Body no longer hangs on the rope - the offcut hangs on it. Stop treating the End Body as lighter
+            // (that was only for the rope holding its weight), or the light offcut props up a heavy body
+            if (_endJoint is ConfigurableJoint endJoint)
+                endJoint.connectedMassScale = 1f;
+
             cuts++;
             onCut?.Activate();
             Cut?.Invoke(this, segmentIndex);
