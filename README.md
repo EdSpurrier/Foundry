@@ -288,6 +288,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.13.0` | `0.5.0` (`0.4.0` also works - nothing new is needed from FrameCoreU; 0.5.0's timed-event fix is recommended) |
 | `0.12.0` | `0.4.0` (0.5.0's timed-event fix recommended when delayed events chain, e.g. a rope cut snapping other ropes) |
 | `0.11.0` | `0.4.0` |
 | `0.10.0` | `0.4.0` (minimum — action warnings use `FrameAction.LogWarning`) |
