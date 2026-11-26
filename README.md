@@ -134,6 +134,7 @@ General:
 - `Attach` — attach objects via a `AttachmentGroup` (position/rotation offset onto a socket).
 - `Detach` — detach objects previously attached via an `AttachmentGroup`.
 - `Animation` — set a bool/int/float/trigger parameter on a Mecanim `Animator`.
+- `TimeScaleAction` (0.14.0) — slow motion (ease to a time scale, hold for a while or until a Restore, ease back) or a hit-stop freeze, through `Foundry.Timing.TimeScale`.
 - `PhysicsAction` — invoke `IPhysicsAction.Activate()` on an assigned behaviour (bridge to `PhysicsImpulse2D`/`PhysicsImpulse3D`, etc.).
 - `TransformerAction` — activate/deactivate an assigned `ITransformerAction` (e.g. toggle a `Follower` on/off).
 
@@ -206,7 +207,11 @@ Camera (all extend `CameraActionBase`, which resolves an explicit `CameraCore` o
 
 ### Physics (0.11.0)
 - `KnockLoose` (0.13.0) — holds something in place until an impact (an egg) or a strike (a peck) knocks it loose: it drops with `Knock Velocity` and a spin, passes through `Pass Through Layers` for a moment so it falls clear of its neighbours, takes `Takes With` down too, and shrinks away after `Remove After`. Event On Knocked. Loose roof tiles, wobbly bricks.
+- `TrajectoryPreview` (0.14.0) — draws a thrown or shot object's arc while aiming: a dotted, fading line that follows gravity and drag and stops at the first thing it would hit. Whoever aims calls `Show(start, velocity, gravity, damping, layers, ignoreRoot)` each frame and `Hide()` when done. `LaunchVelocity` and `CollidesWith` help work out those values from a Rigidbody and its layer.
 - `StayAwake` — keeps a Rigidbody from sleeping, so it reacts the moment what it rests on goes away (a support switched off, broken or despawned). Unity doesn't wake a sleeping body when a collider under it is disabled or destroyed, so without it the body hangs in mid-air. Optional **Sleep Once Settled** lets it sleep again after it has moved and stayed at rest for `Settle Time`; off by default, the safe choice when it may land on debris that later disappears.
+
+### Timing (0.14.0)
+- `TimeScale` — a static slow-motion / hit-stop service that owns `Time.timeScale`; nothing to place in the scene. `Slow(scale, easeIn, easeOut, maxDuration)` gives a handle to `Release`; `HitStop(duration)` freezes briefly. Requests combine (the slowest wins), ease on real time, and scale `Time.fixedDeltaTime` too so physics stays smooth; audio isn't slowed.
 
 ### Machines (0.12.0)
 - `Dispenser` — hands out a copy of a `Template` (a switched-off scene object) each `Dispense()`: a hatch that drops a crate, a chute, a pipe. Optional `Door` (a hinge transform) swings open first and shut after; copies start with `Launch Velocity`; `Cooldown`; `Max Alive` removes the oldest; `Auto Every` (0.13.0) dispenses by itself on a timer while it's switched on. Events On Dispense / On Door Shut. Use it from any event with the `DispenseAction`.
@@ -288,6 +293,7 @@ Foundry and FrameCoreU are versioned independently (each repo's current branch n
 
 | Foundry | FrameCoreU |
 |---|---|
+| `0.14.0` | `0.5.0` (`0.4.0` also works - the new pieces only use FrameAction; 0.5.0's timed-event fix is recommended) |
 | `0.13.0` | `0.5.0` (`0.4.0` also works - nothing new is needed from FrameCoreU; 0.5.0's timed-event fix is recommended) |
 | `0.12.0` | `0.4.0` (0.5.0's timed-event fix recommended when delayed events chain, e.g. a rope cut snapping other ropes) |
 | `0.11.0` | `0.4.0` |
